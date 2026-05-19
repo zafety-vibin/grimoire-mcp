@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "bot.ttrpg/grimoire",
   "title": "Grimoire",
-  "description": "Structured TTRPG campaign manager for game masters. Create and update NPCs, locations, factions, quests, items, lore, sessions, and knowledge graph relationships across 13 entity types. OAuth 2.1, streamable HTTP, 41 tools.",
+  "description": "Manage TTRPG campaigns: NPCs, locations, factions, quests, sessions, lore, and knowledge graphs.",
   "version": "1.4.0",
   "repository": {
     "url": "https://github.com/zafety-vibin/grimoire-mcp",
