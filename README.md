@@ -1,153 +1,80 @@
-# MCP Registry
+# Grimoire MCP
 
-The MCP registry provides MCP clients with a list of MCP servers, like an app store for MCP servers.
+> Your campaign, organized by magic.
 
-[**📤 Publish my MCP server**](docs/modelcontextprotocol-io/quickstart.mdx) | [**⚡️ Live API docs**](https://registry.modelcontextprotocol.io/docs) | [**👀 Ecosystem vision**](docs/design/ecosystem-vision.md) | 📖 **[Full documentation](./docs)**
+Grimoire is a structured TTRPG campaign brain for game masters. This MCP gives any AI client you connect a live, structured view of your campaign data and current situation in-game. Upload and parse notes into structured database entities, query your world by relationship, drive prep and recaps from the conversation you're already having.
 
-## Development Status
+| | |
+|---|---|
+| **Endpoint** | `https://api.ttrpg.bot/mcp` |
+| **Transport** | Streamable HTTP (MCP spec 2025-06-18) |
+| **Auth** | OAuth 2.1, one-click consent flow |
+| **Tools** | 41 across 6 groups |
+| **Web app** | https://www.ttrpg.bot |
 
-**2025-10-24 update**: The Registry API has entered an **API freeze (v0.1)** 🎉. For the next month or more, the API will remain stable with no breaking changes, allowing integrators to confidently implement support. This freeze applies to v0.1 while development continues on v0. We'll use this period to validate the API in real-world integrations and gather feedback to shape v1 for general availability. Thank you to everyone for your contributions and patience—your involvement has been key to getting us here!
+## Three clicks to connect
 
-**2025-09-08 update**: The registry has launched in preview 🎉 ([announcement blog post](https://blog.modelcontextprotocol.io/posts/2025-09-08-mcp-registry-preview/)). While the system is now more stable, this is still a preview release and breaking changes or data resets may occur. A general availability (GA) release will follow later. We'd love your feedback in [GitHub discussions](https://github.com/modelcontextprotocol/registry/discussions/new?category=ideas) or in the [#registry-dev Discord](https://discord.com/channels/1358869848138059966/1369487942862504016) ([joining details here](https://modelcontextprotocol.io/community/communication)).
+1. **Add the connector.** In Claude.ai (or any MCP client that supports custom connectors), open Settings → Connectors → Add custom connector and paste `https://api.ttrpg.bot/mcp`.
+2. **Sign in and pick a campaign.** Your client opens the Grimoire consent screen. Sign in with the account that owns the campaign, pick which campaign the AI should see, click Approve. Access is scoped to that one campaign, enforced server-side.
+3. **Ask it something about your world.** *"Who knows about the cult?" "What was the queen's reaction in session 4?" "Generate three rumors that fit my current city."* The client reads live and answers from your data.
 
-Current key maintainers:
-- **Adam Jones** (Anthropic) [@domdomegg](https://github.com/domdomegg)  
-- **Tadas Antanavicius** (PulseMCP) [@tadasant](https://github.com/tadasant)
-- **Toby Padilla** (GitHub) [@toby](https://github.com/toby)
-- **Radoslav (Rado) Dimitrov** (Stacklok) [@rdimitrov](https://github.com/rdimitrov)
+Full setup walkthrough with client-specific instructions: https://www.ttrpg.bot/docs/mcp/
 
-## Contributing
+## What you can do with it
 
-We use multiple channels for collaboration - see [modelcontextprotocol.io/community/communication](https://modelcontextprotocol.io/community/communication).
+### The fast wins
+Parse a paragraph of session notes into NPCs, factions, and threads. Dig up the location you mentioned three sessions ago. Update a faction's status straight from a recap.
 
-Often (but not always) ideas flow through this pipeline:
+### The deeper plays
+Model an NPC reaction grounded in motivations they actually have and a political web they actually sit inside. Project the next move House Vale makes, if it moves at all. Generate three rumors that fit your city, not generic fantasy.
 
-- **[Discord](https://modelcontextprotocol.io/community/communication)** - Real-time community discussions
-- **[Discussions](https://github.com/modelcontextprotocol/registry/discussions)** - Propose and discuss product/technical requirements
-- **[Issues](https://github.com/modelcontextprotocol/registry/issues)** - Track well-scoped technical work  
-- **[Pull Requests](https://github.com/modelcontextprotocol/registry/pulls)** - Contribute work towards issues
+### The MC-Possibilities
+Chain Grimoire MCP to other MCPs. Pipe your last session into a slideshow MCP and a voiceover MCP for an automated play-by-play. Hook a calendar MCP and the bot reminds you to prep.
 
-### Quick start:
+The pitch is flexibility, not a baked-in workflow. MCP is a protocol; once Grimoire is connected to a frontier model, what you ask the model to do with it is the workflow.
 
-#### Pre-requisites
+## The toolbox
 
-- **Docker**
-- **Go 1.24.x**
-- **ko** - Container image builder for Go ([installation instructions](https://ko.build/install/))
-- **golangci-lint v2.4.0**
+41 tools across six groups.
 
-#### Running the server
+**Entities** (9): `search_campaign`, `get_entity`, `list_entities`, `get_field_options`, `get_tag_options`, `create_entity`, `update_entity`, `delete_entity`, `batch_create_entities`. Covers all 13 entity types: NPCs, Locations, Factions, Quests, Items, Player Characters, Creatures, Lore Entries, World Rules, Planar Forces, Session Recaps, Session Preps, Custom Mechanics.
 
-```bash
-# Start full development environment
-make dev-compose
-```
+**Relationships** (3): `add_relationship`, `get_relationships`, `delete_relationship`. Typed edges between any two entities.
 
-This starts the registry at [`localhost:8080`](http://localhost:8080) with PostgreSQL. The database uses ephemeral storage and is reset each time you restart the containers, ensuring a clean state for development and testing.
+**Knowledge graphs** (8): `get_constitution`, `get_entity_catalog`, `get_knowledge_graph`, `list_entity_graphs`, `get_entity_graph`, `add_to_entity_graph`, `create_entity_graph_edge`, `toggle_graph_attention`. Political, timeline, and geography projections with visibility filtering.
 
-**Note:** The registry uses [ko](https://ko.build) to build container images. The `make dev-compose` command automatically builds the registry image with ko and loads it into your local Docker daemon before starting the services.
+**Open threads** (7): `get_open_threads`, `create_open_thread`, `resolve_open_thread`, `unresolve_open_thread`, `update_open_thread`, `get_thread_progressions`, `add_thread_progression`. Loose ends and how they evolve session over session.
 
-By default, the registry seeds from the production API with a filtered subset of servers (to keep startup fast). This ensures your local environment mirrors production behavior and all seed data passes validation. For offline development you can seed from a file without validation with `MCP_REGISTRY_SEED_FROM=data/seed.json MCP_REGISTRY_ENABLE_REGISTRY_VALIDATION=false make dev-compose`.
+**Wiki** (9): `get_wiki_tree`, `get_wiki_page`, `create_wiki_page`, `create_wiki_block`, `update_wiki_block`, `move_wiki_block`, `delete_wiki_block`, `batch_create_wiki_blocks`, `batch_reorder_wiki_blocks`. Block-based collaborative pages; the AI reads and edits them like you do.
 
-The setup can be configured with environment variables in [docker-compose.yml](./docker-compose.yml) - see [.env.example](./.env.example) for a reference.
+**Campaign meta** (5): `current_campaign`, `get_campaign_context`, `get_narrative_state`, `get_campaign_bible`, `update_campaign_bible`. `get_narrative_state` aggregates recent sessions, open threads, canonical facts, and active arcs into one view.
 
-<details>
-<summary>Alternative: Running a pre-built Docker image</summary>
+## Visibility and safety
 
-Pre-built Docker images are automatically published to GitHub Container Registry. Note that the image does not bundle PostgreSQL, so you need to run your own and point the registry at it via `MCP_REGISTRY_DATABASE_URL` (see [docker-compose.yml](./docker-compose.yml) for a working example):
+Everything respects Grimoire's visibility model: `common-knowledge`, `player-knowledge`, `dm-secret`. The AI sees what you've marked it can see and nothing more. Player accounts connecting through MCP get filtered views; GM accounts get the full picture.
 
-```bash
-# Run latest stable release
-docker run -p 8080:8080 ghcr.io/modelcontextprotocol/registry:latest
+OAuth scopes are campaign-scoped. Granting access to one campaign doesn't grant access to your other campaigns.
 
-# Run latest from main branch (continuous deployment)
-docker run -p 8080:8080 ghcr.io/modelcontextprotocol/registry:main
+## Pricing
 
-# Run specific release version
-docker run -p 8080:8080 ghcr.io/modelcontextprotocol/registry:v1.0.0
+End-to-end free to try. Free tier on Grimoire pairs with Claude.ai's free tier with no card required. Pro and Pro+ unlock larger campaign sizes and additional features.
 
-# Run development build from main branch
-docker run -p 8080:8080 ghcr.io/modelcontextprotocol/registry:main-20250906-abc123d
-```
+Pricing: https://www.ttrpg.bot/#pricing
 
-**Available tags:** 
-- **Releases**: `latest`, `v1.0.0`, `v1.1.0`, etc.
-- **Continuous**: `main` (latest main branch build)
-- **Development**: `main-<date>-<sha>` (specific commit builds)
+## Links
 
-</details>
+- Product: https://www.ttrpg.bot
+- MCP overview and connect flow: https://www.ttrpg.bot/mcp
+- Full setup guide: https://www.ttrpg.bot/docs/mcp/
+- Changelog: https://www.ttrpg.bot/changelog
+- Support: zmanlevelup@gmail.com
 
-#### Publishing a server
+## About this repository
 
-To publish a server, we've built a simple CLI. You can use it with:
+This is the public documentation and registry submission artifact for the Grimoire MCP. The MCP server itself is operated as a hosted service; source for the server is not public.
 
-```bash
-# Build the latest CLI
-make publisher
+`server.json` in this repo is what's published to `registry.modelcontextprotocol.io` as [`bot.ttrpg/grimoire`](https://registry.modelcontextprotocol.io/v0.1/servers?search=bot.ttrpg/grimoire).
 
-# Use it!
-./bin/mcp-publisher --help
-```
+## License
 
-See [the publisher guide](./docs/modelcontextprotocol-io/quickstart.mdx) for more details.
-
-#### Other commands
-
-```bash
-# Run lint, unit tests and integration tests
-make check
-```
-
-There are also a few more helpful commands for development. Run `make help` to learn more, or look in [Makefile](./Makefile).
-
-<!--
-For Claude and other AI tools: Always prefer make targets over custom commands where possible.
--->
-
-## Architecture
-
-### Project Structure
-
-```
-├── cmd/                     # Application entry points
-│   └── publisher/           # Server publishing tool
-├── data/                    # Seed data
-├── deploy/                  # Deployment configuration (Pulumi)
-├── docs/                    # Documentation
-├── internal/                # Private application code
-│   ├── api/                 # HTTP handlers and routing
-│   ├── auth/                # Authentication (GitHub OAuth, JWT, namespace blocking)
-│   ├── config/              # Configuration management
-│   ├── database/            # Data persistence (PostgreSQL)
-│   ├── service/             # Business logic
-│   ├── telemetry/           # Metrics and monitoring
-│   └── validators/          # Input validation
-├── pkg/                     # Public packages
-│   ├── api/                 # API types and structures
-│   │   └── v0/              # Version 0 API types
-│   └── model/               # Data models for server.json
-├── scripts/                 # Development and testing scripts
-├── tests/                   # Integration tests
-└── tools/                   # CLI tools and utilities
-    └── validate-*.sh        # Schema validation tools
-```
-
-### Authentication
-
-Publishing supports multiple authentication methods:
-- **GitHub OAuth** - For publishing by logging into GitHub
-- **GitHub OIDC** - For publishing from GitHub Actions
-- **DNS verification** - For proving ownership of a domain and its subdomains
-- **HTTP verification** - For proving ownership of a domain
-
-The registry validates namespace ownership when publishing. E.g. to publish...:
-- `io.github.domdomegg/my-cool-mcp` you must login to GitHub as `domdomegg`, or be in a GitHub Action on domdomegg's repos
-- `me.adamjones/my-cool-mcp` you must prove ownership of `adamjones.me` via DNS or HTTP challenge
-
-## Community Projects
-
-Check out [community projects](docs/community-projects.md) to explore notable registry-related work created by the community.
-
-## More documentation
-
-See the [documentation](./docs) for more details if your question has not been answered here!
+MIT (for this documentation repository).
