@@ -1,0 +1,11 @@
+# Never commit private keys.
+*.key
+*.pem
+private*.txt
+private*.hex
+
+# Don't ship the publisher binary or the downloaded tarball.
+mcp-publisher
+mcp-publisher.exe
+*.exe
+*.tar.gz
