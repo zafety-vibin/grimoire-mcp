@@ -14,7 +14,7 @@ Grimoire is a structured TTRPG campaign brain for game masters. This MCP gives a
 
 ## Three clicks to connect
 
-1. **Add the connector.** In Claude.ai (or any MCP client that supports custom connectors), open Settings → Connectors → Add custom connector and paste `https://api.ttrpg.bot/mcp`.
+1. **Add the connector.** In Claude.ai or ChatGPT (or any MCP client that supports custom connectors), open Settings → Connectors → Add custom connector and paste `https://api.ttrpg.bot/mcp`.
 2. **Sign in and pick a campaign.** Your client opens the Grimoire consent screen. Sign in with the account that owns the campaign, pick which campaign the AI should see, click Approve. Access is scoped to that one campaign, enforced server-side.
 3. **Ask it something about your world.** *"Who knows about the cult?" "What was the queen's reaction in session 4?" "Generate three rumors that fit my current city."* The client reads live and answers from your data.
 
@@ -57,7 +57,7 @@ OAuth scopes are campaign-scoped. Granting access to one campaign doesn't grant 
 
 ## Pricing
 
-End-to-end free to try. Free tier on Grimoire pairs with Claude.ai's free tier with no card required. Pro and Pro+ unlock larger campaign sizes and additional features.
+End-to-end free to try. Grimoire's free tier pairs with the free tiers on Claude.ai and ChatGPT, both of which support MCP connectors with no card required. Pro and Pro+ unlock larger campaign sizes and additional features.
 
 Pricing: https://www.ttrpg.bot/#pricing
 
