@@ -73,7 +73,7 @@ Pricing: https://www.ttrpg.bot/#pricing
 
 This is the public documentation and registry submission artifact for the Grimoire MCP. The MCP server itself is operated as a hosted service; source for the server is not public.
 
-`server.json` in this repo is what's published to `registry.modelcontextprotocol.io` as [`bot.ttrpg/grimoire`](https://registry.modelcontextprotocol.io/v0.1/servers?search=bot.ttrpg/grimoire).
+`server.json` in this repo is what's published to `registry.modelcontextprotocol.io` as [`bot.ttrpg/grimoire`](https://registry.modelcontextprotocol.io/?q=grimoire).
 
 ## License
 
