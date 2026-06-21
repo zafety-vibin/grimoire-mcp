@@ -9,7 +9,7 @@ Grimoire is a structured TTRPG campaign brain for game masters. This MCP gives a
 | **Endpoint** | `https://api.ttrpg.bot/mcp` |
 | **Transport** | Streamable HTTP (MCP spec 2025-06-18) |
 | **Auth** | OAuth 2.1, one-click consent flow |
-| **Tools** | 41 across 6 groups |
+| **Tools** | 48 across 7 groups |
 | **Web app** | https://www.ttrpg.bot |
 
 ## Three clicks to connect
@@ -35,13 +35,15 @@ The pitch is flexibility, not a baked-in workflow. MCP is a protocol; once Grimo
 
 ## The toolbox
 
-41 tools across six groups.
+48 tools across seven groups.
 
-**Entities** (9): `search_campaign`, `get_entity`, `list_entities`, `get_field_options`, `get_tag_options`, `create_entity`, `update_entity`, `delete_entity`, `batch_create_entities`. Covers all 13 entity types: NPCs, Locations, Factions, Quests, Items, Player Characters, Creatures, Lore Entries, World Rules, Planar Forces, Session Recaps, Session Preps, Custom Mechanics.
+**Entities** (10): `search_campaign`, `get_entity`, `list_entities`, `get_field_options`, `get_tag_options`, `get_entity_schema`, `create_entity`, `update_entity`, `delete_entity`, `batch_create_entities`. Covers all 14 entity types: NPCs, Locations, Factions, Quests, Items, Player Characters, Creatures, Vehicles, Lore Entries, World Rules, Planar Forces, Session Recaps, Session Preps, Custom Mechanics. `get_entity_schema` reports the exact fields a category accepts — native columns, select options, and the campaign's custom fields — so writes land in the right place instead of a catch-all bag.
 
 **Relationships** (3): `add_relationship`, `get_relationships`, `delete_relationship`. Typed edges between any two entities.
 
 **Knowledge graphs** (8): `get_constitution`, `get_entity_catalog`, `get_knowledge_graph`, `list_entity_graphs`, `get_entity_graph`, `add_to_entity_graph`, `create_entity_graph_edge`, `toggle_graph_attention`. Political, timeline, and geography projections with visibility filtering.
+
+**World foundations** (6): `create_foundation_node`, `update_foundation_node`, `delete_foundation_node`, `create_foundation_edge`, `delete_foundation_edge`, `update_world_foundations`. Write tools for the campaign's constitution — the always-loaded foundation layer. Foundation nodes are world-defining concepts (a cataclysm, a hidden power, a cosmological law) connected by labeled edges, and `update_world_foundations` sets the structured World Foundations document (magic system, divine hierarchy, fundamental laws). These are the mechanical and cosmological truths of the world, distinct from database entities like NPCs and locations.
 
 **Open threads** (7): `get_open_threads`, `create_open_thread`, `resolve_open_thread`, `unresolve_open_thread`, `update_open_thread`, `get_thread_progressions`, `add_thread_progression`. Loose ends and how they evolve session over session.
 
