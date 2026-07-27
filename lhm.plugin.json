@@ -1,0 +1,13 @@
+{
+  "author": "Zach Townes",
+  "authorUrl": "https://github.com/zafety-vibin",
+  "category": "gaming",
+  "cloudEndpoint": "https://api.ttrpg.bot/mcp",
+  "description": "Campaign manager for D&D and TTRPG gamemasters with a hosted MCP server. Your AI reads and edits a typed campaign database live: 14 entity schemas, knowledge graphs, open threads, and a collaborative wiki, with GM secrets enforced server side. One OAuth click connects Claude, ChatGPT, or Cursor; the free tier includes full MCP access.",
+  "homepage": "https://www.ttrpg.bot/mcp",
+  "icon": "https://api.ttrpg.bot/favicon.svg",
+  "identifier": "zafety-vibin-grimoire-mcp",
+  "name": "Grimoire",
+  "tags": ["ttrpg", "dnd", "campaign-manager", "worldbuilding", "knowledge-graph", "tabletop", "games"],
+  "version": "1.5.0"
+}
