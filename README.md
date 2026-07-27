@@ -2,17 +2,21 @@
 
 > Your campaign, organized by magic.
 
-Grimoire is a structured TTRPG campaign brain for game masters. This MCP gives any AI client you connect a live, structured view of your campaign data and current situation in-game. Upload and parse notes into structured database entities, query your world by relationship, drive prep and recaps from the conversation you're already having.
-
 | | |
 |---|---|
 | **Endpoint** | `https://api.ttrpg.bot/mcp` |
 | **Transport** | Streamable HTTP (MCP spec 2025-06-18) |
 | **Auth** | OAuth 2.1, one-click consent flow |
-| **Tools** | 48 across 7 groups |
+| **Tools** | 48 across 7 groups (20 read, 28 write) |
 | **Web app** | https://www.ttrpg.bot |
 
-## Three clicks to connect
+## What is Grimoire?
+
+Grimoire is a campaign manager for D&D and tabletop RPG gamemasters with a hosted MCP server built in. A campaign in Grimoire is structured data, not pages: typed NPCs, factions, locations, quests, items, sessions, and lore, connected by relationships and knowledge graphs. This MCP gives any AI client you connect a live, structured view of that database and your current situation in-game, so the AI answers from your actual canon instead of guessing. Upload and parse notes into structured database entities, query your world by relationship, drive prep and recaps from the conversation you're already having.
+
+## How to use Grimoire?
+
+Three clicks, nothing to install:
 
 1. **Add the connector.** In Claude.ai or ChatGPT (or any MCP client that supports custom connectors), open Settings → Connectors → Add custom connector and paste `https://api.ttrpg.bot/mcp`.
 2. **Sign in and pick a campaign.** Your client opens the Grimoire consent screen. Sign in with the account that owns the campaign, pick which campaign the AI should see, click Approve. Access is scoped to that one campaign, enforced server-side.
@@ -20,7 +24,32 @@ Grimoire is a structured TTRPG campaign brain for game masters. This MCP gives a
 
 Full setup walkthrough with client-specific instructions: https://www.ttrpg.bot/docs/mcp/
 
-## What you can do with it
+For clients configured by JSON file instead of a connectors UI:
+
+```json
+{
+  "mcpServers": {
+    "grimoire": {
+      "type": "streamable-http",
+      "url": "https://api.ttrpg.bot/mcp"
+    }
+  }
+}
+```
+
+Auth is OAuth 2.1 with PKCE; the client opens a browser sign-in on first connect. A free Grimoire account at https://www.ttrpg.bot provides the campaign the server reads.
+
+## Key features of Grimoire
+
+- 48 tools (20 read, 28 write) over a typed campaign database with 14 entity schemas
+- Knowledge graph queries: political, timeline, and geography projections with visibility filtering
+- Narrative state in one call: recent sessions, open plot threads, active arcs, and canon facts
+- Full write path: create and update entities, log thread progressions, edit wiki pages and blocks
+- GM secrets enforced server-side with three visibility tiers (common knowledge, player knowledge, GM secrets)
+- Remote streamable HTTP with OAuth 2.1; nothing to install or self-host
+- Free tier includes full MCP access, and Grimoire never charges for AI tokens
+
+## Use cases of Grimoire
 
 ### The fast wins
 Parse a paragraph of session notes into NPCs, factions, and threads. Dig up the location you mentioned three sessions ago. Update a faction's status straight from a recap.
@@ -59,9 +88,31 @@ OAuth scopes are campaign-scoped. Granting access to one campaign doesn't grant 
 
 ## Pricing
 
-End-to-end free to try. Grimoire's free tier pairs with the free tiers on Claude.ai and ChatGPT, both of which support MCP connectors with no card required. Pro and Pro+ unlock larger campaign sizes and additional features.
+End-to-end free to try. Grimoire's free tier pairs with the free tiers on Claude.ai and ChatGPT, both of which support MCP connectors with no card required. Pro unlocks unlimited campaigns, custom fields on every category, and more storage.
 
 Pricing: https://www.ttrpg.bot/#pricing
+
+## FAQ from Grimoire
+
+### Where is the source code for Grimoire?
+
+The MCP server is operated as a hosted service and its source is not public. This repository is the public documentation and registry artifact: `server.json` here is what's published to `registry.modelcontextprotocol.io` as [`bot.ttrpg/grimoire`](https://registry.modelcontextprotocol.io/?q=grimoire).
+
+### Does Grimoire include a standard MCP config?
+
+Yes. Use the streamable HTTP block above, or skip config entirely: clients with custom connector support only need the URL `https://api.ttrpg.bot/mcp`.
+
+### Is it free?
+
+Yes, end to end. Grimoire's free tier covers full MCP access, and the free tiers of Claude.ai and ChatGPT each support a custom connector with no card required.
+
+### Which clients work?
+
+Claude (web and desktop), ChatGPT (plans with connector support), Cursor, and any MCP-compatible client that can talk to remote streamable HTTP servers.
+
+### Does connecting share my campaign with an AI vendor?
+
+You bring your own client. Grimoire exposes the one campaign you approve to that client and nothing else, the scopes are shown on the consent screen, and access is revocable at any time.
 
 ## Links
 
@@ -70,12 +121,6 @@ Pricing: https://www.ttrpg.bot/#pricing
 - Full setup guide: https://www.ttrpg.bot/docs/mcp/
 - Changelog: https://www.ttrpg.bot/changelog
 - Support: zmanlevelup@gmail.com
-
-## About this repository
-
-This is the public documentation and registry submission artifact for the Grimoire MCP. The MCP server itself is operated as a hosted service; source for the server is not public.
-
-`server.json` in this repo is what's published to `registry.modelcontextprotocol.io` as [`bot.ttrpg/grimoire`](https://registry.modelcontextprotocol.io/?q=grimoire).
 
 ## License
 
