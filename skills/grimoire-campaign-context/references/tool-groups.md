@@ -1,6 +1,6 @@
 # Grimoire MCP tool reference
 
-48 tools across 7 groups. 20 read, 28 write. Categories are: npcs, locations,
+49 tools across 7 groups. 21 read, 28 write. Categories are: npcs, locations,
 factions, quests, items, lore_entries, session_recaps, creatures,
 player_characters, world_rules, planar_forces, custom_mechanics, session_preps,
 vehicles.
@@ -84,21 +84,33 @@ answer is generated inside. Confirm with the GM before writing here.
 | `get_thread_progressions` | How a thread has moved session over session. |
 | `add_thread_progression` | Log a movement: start, update, complication, resolution. Link with `key_event_id` when possible. GM role only. |
 
-## Wiki (9)
+## Wiki (10)
 
-Block-based collaborative pages. `get_wiki_tree`, `get_wiki_page`,
+Block-based collaborative pages. `get_wiki_tree`, `get_wiki_page`, `search_wiki`,
 `create_wiki_page`, `create_wiki_block`, `update_wiki_block`, `move_wiki_block`,
 `delete_wiki_block`, `batch_create_wiki_blocks`, `batch_reorder_wiki_blocks`.
 
+`search_wiki` is full-text over page titles and block prose; `search_campaign`
+never touches wiki rows. Results carry `pageId`, `pageTitle`, an optional
+`blockId` when the hit is inside a block, a snippet, and a rank. Follow up with
+`get_wiki_page` for the full page.
+
 Block types: text, heading (level 1 to 6), bullet, numbered, quote, callout (info,
-warning, success, error), divider, page, image. Text is wrapped as
-`{"content": [{"text": "..."}]}`.
+warning, success, error), divider, page, image, table. Text is wrapped as
+`{"content": [{"text": "..."}]}`. A table is written and read as a plain markdown
+grid: `{"markdown": "| Name | Role |\n| --- | --- |\n| Varka | Chief |"}`.
+
+Links inside any block, including table cells, travel as tokens the server resolves
+to real records: `@[Name](entity://category/uuid)` for entities and
+`@[Title](page://uuid)` for pages. Read a block's `text`, edit around the tokens,
+and write it back verbatim to keep the links.
 
 Multi-block flow: `batch_create_wiki_blocks`, then `get_wiki_page` to verify order,
 then `batch_reorder_wiki_blocks`. Single-block creates have a positioning race.
 
 Block visibility: `inherit` (default), `common-knowledge`, `dm-secret`,
-`player-knowledge`.
+`player-knowledge`. All wiki tools work in the campaign wiki space only; a page the
+connected role cannot reach answers "page not found" everywhere.
 
 ## Campaign meta (5)
 
@@ -119,14 +131,14 @@ same information through the tool interface.
 
 ## Role gating at a glance
 
-`tools/list` returns the same 48 tools regardless of role. Gating happens at call
+`tools/list` returns the same 49 tools regardless of role. Gating happens at call
 time.
 
 | Availability | Tools |
 |---|---|
 | Player: permanently denied | `get_constitution`, `get_campaign_bible`, `get_relationships`, `get_open_threads`, `get_thread_progressions`, `list_entity_graphs`, `get_entity_graph` |
 | Player: allowed only when the portal policy is `revealed` or `open` | `get_campaign_context`, `get_narrative_state`, `get_entity_catalog`, `get_knowledge_graph` |
-| Player: always allowed | `current_campaign`, `search_campaign`, `get_wiki_tree`, `get_wiki_page` |
+| Player: always allowed | `current_campaign`, `search_campaign`, `search_wiki`, `get_wiki_tree`, `get_wiki_page` |
 | GM only | every write tool, and everything in the first two rows |
 
 Player-visible results are additionally visibility-filtered in the query layer, so

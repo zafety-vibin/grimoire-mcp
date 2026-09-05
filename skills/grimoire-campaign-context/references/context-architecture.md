@@ -48,6 +48,15 @@ entity graphs.
 **Layer 5, Entity deep dive.** `get_entity`. One record, complete. Call it as many
 times as the question needs.
 
+**Beside the layers, the wiki.** The wiki is the campaign's prose: handouts, lore
+pages, house rules, session notes, in blocks whose sentences carry tokens that
+resolve to real records and pages. It is not numbered because it is reached by
+subject rather than by breadth: `search_wiki` for the words, `get_wiki_page` for the
+page, then the tokens lead you back into the layers (`get_entity` on an
+`entity://` id, another page on a `page://` id). When the question is "what did the
+GM write about X", start here; when it is "what is true about X", start in the
+layers and use the wiki to read the prose around the facts.
+
 **The result.** The context you end up holding is assembled from the layers you
 chose, in the order you chose them. It is unique per question, and that trajectory
 is what keeps the answer inside the world's nuance instead of drifting toward genre
@@ -62,8 +71,10 @@ defaults.
 | "How would X react to Y" | constitution, context, narrative state, political graph, entity on X and the relevant neighbours |
 | "Where is X relative to Y" | constitution, context, geography graph |
 | "What should I prep" | constitution, context, narrative state, timeline graph with attention, entity on the shortlist |
-| "Turn these notes into entities" | constitution, context, catalog, schema, batch create, relationships |
-| "Who knows about Z" | constitution, context, search, relationships, political graph |
+| "Turn these notes into entities" | constitution, context, catalog, schema, batch create, relationships, then a wiki page with tokens if the prose is worth keeping |
+| "Who knows about Z" | constitution, context, search, relationships, political graph, wiki search for the prose |
+| "What did the GM write about the abbey" | constitution, context, wiki search, wiki page, then entity on the tokens the page carries |
+| "Write up X for the players" | constitution, context, entity on X, wiki tree, create page under the right section, blocks with tokens, a page block on the parent |
 
 ## The point
 
