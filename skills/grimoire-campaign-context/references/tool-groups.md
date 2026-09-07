@@ -24,7 +24,7 @@ vehicles.
 
 | Tool | Use it for |
 |---|---|
-| `add_relationship` | Typed edge between two entities. Routes to an FK field when one exists, otherwise a junction row labelled with `relationship_type`. Appears as an edge in `get_knowledge_graph`; political relationships also put both endpoints on the app's Political Web. |
+| `add_relationship` | Typed edge between two entities. Routes to an FK field when one exists, otherwise a junction row labelled with `relationship_type`. Appears as an edge in `get_knowledge_graph`; political relationships also put both endpoints on the app's Political Web, and so do the three political FK writes `npcs.faction_id` (member_of), `npcs.superior_npc_id` (reports_to) and `factions.leader_id` (led_by). Writing a session recap does the same for what it references: the NPCs and player characters it names join the Political Web, the locations join the geography graph. |
 | `get_relationships` | One entity's edges, junction rows and FK rows, both real. On an incoming junction row `targetCategory` is the queried entity's category and `sourceCategory` is the other side. A table reachable from both sides (`faction_members`) is listed once per call. An FK plus a roster row for the same faction is one membership, not two. |
 | `delete_relationship` | Remove an edge. |
 

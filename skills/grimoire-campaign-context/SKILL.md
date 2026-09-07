@@ -209,8 +209,12 @@ Other write rules:
   junction row otherwise, using `relationship_type` as the edge label. Database
   relationships are the edges of `get_knowledge_graph`. Political ones (NPC-NPC,
   memberships, alliances, rivalries, PC ties) also place both endpoints on the
-  campaign's Political Web in the app, so `add_to_entity_graph(graph_type=political)`
-  is never needed after `add_relationship`. Do **not** also call
+  campaign's Political Web in the app, and so do the three political FK writes,
+  `npcs.faction_id` (member_of), `npcs.superior_npc_id` (reports_to) and
+  `factions.leader_id` (led_by), so `add_to_entity_graph(graph_type=political)`
+  is never needed after `add_relationship`. Writing a session recap places what it
+  references the same way: the NPCs and player characters it names join the
+  Political Web, the locations it names join the geography graph. Do **not** also call
   `add_to_entity_graph` or `create_entity_graph_edge` for the same link; those two
   exist only for custom edges with no database equivalent, and using them here
   creates duplicate edges.
