@@ -5,7 +5,8 @@ description: >
   skill whenever a Grimoire connector is available and the user asks anything about
   their campaign, world, NPCs, factions, locations, quests, sessions, plot threads,
   or wiki. Covers the session-start centering sequence (current_campaign,
-  get_constitution, get_campaign_context, get_narrative_state) that must run before
+  get_constitution, get_narrative_state; get_campaign_context for player-role
+  sessions) that must run before
   answering campaign questions, which read tool to reach for, how to write typed
   entities without dumping data into the wrong fields, how to search, read, and write
   the wiki without breaking its links or tables, how the visibility model constrains
@@ -52,15 +53,21 @@ context gets loaded deliberately instead of dumped all at once.
    campaign summary, Campaign Bible summary, and the world foundations graph. This
    is where the setting's defining events, cosmology, and the GM's content
    boundaries live. It colors every downstream answer.
-3. `get_campaign_context`. Genre, ruleset, setting technology and magic levels,
+3. The `campaignContext` block. Genre, ruleset, setting technology and magic levels,
    which entity categories this campaign uses, and what this campaign calls them.
-   Call it early. It is how you stop saying "NPC" when this table says "contact,"
-   and how you stop applying D&D 5e assumptions to a Blades-adjacent horror game.
+   It rides inside the `get_constitution` response you just read, and inside
+   `get_narrative_state` and `get_entity_catalog` as well, so read it there instead
+   of fetching it again. `get_campaign_context` is the standalone form of the same
+   block, for a session that cannot call `get_constitution` (player role) or that
+   needs nothing but the vocabulary. Read it either way: it is how you stop saying
+   "NPC" when this table says "contact," and how you stop applying D&D 5e
+   assumptions to a Blades-adjacent horror game.
 
 **Then, if the question touches the present tense of the story:**
 
 4. `get_narrative_state` (Layer 1.5). Recent sessions with summaries and key events,
-   open threads split into major and minor, canonical facts, active arcs, and recent
+   plus each session's dmConsequences and dmBehindScenes on GM connections, open
+   threads split into major and minor, canonical facts, active arcs, and recent
    observations. Call it for anything about "now": what the party is doing, what
    just happened, how an NPC would react today, prep, recaps, consequences. Skip it
    for a pure static lookup like "what is the population of Vethmoor."
@@ -69,7 +76,8 @@ context gets loaded deliberately instead of dumped all at once.
 
 5. `get_entity_catalog` (Layer 2). Every active entity as id plus name, grouped by
    type, plus compact node and edge lists for the political, geography, timeline,
-   and foundations graphs. Cheap. This is the map. Call it when you need to know
+   and foundations graphs, with the same edge types get_knowledge_graph returns.
+   Cheap. This is the map. Call it when you need to know
    what exists, and always call it before creating anything so you do not make a
    duplicate.
 6. `get_knowledge_graph(graph_type, attention=true)` (Layer 3). The GM-curated
@@ -107,14 +115,18 @@ return visibility-filtered results. The refusal message names the policy, so rea
 it rather than guessing.
 
 **Always available to a player**: `current_campaign`, `search_campaign`,
-`search_wiki`, `get_wiki_tree`, `get_wiki_page`. All of them return only what the
-player's visibility admits, and a page the player cannot reach answers "page not
-found" rather than "forbidden", so a not-found is not evidence that something is
-being hidden.
+`search_wiki`, `get_wiki_tree`, `get_wiki_page`, `get_entity`, `list_entities`,
+`get_entity_schema`, `get_field_options`, `get_tag_options`. All of them return only
+what the player's visibility admits (`get_entity` and `list_entities` apply the
+dm-secret row filter and strip `dm_*` fields), and a page the player cannot reach
+answers "page not found" rather than "forbidden", so a not-found is not evidence
+that something is being hidden.
 
 So a player-role centering sequence is: `current_campaign`, then
 `get_campaign_context` (if the portal allows it), then `get_wiki_tree`,
-`search_wiki`, and `search_campaign` for everything else. You will not get the
+`search_wiki`, and `search_campaign` for everything else. `get_narrative_state` and
+`get_entity_catalog` embed the same campaignContext block when the portal allows
+them, so one fetch is enough. You will not get the
 constitution. Say so plainly if the user asks for world truths you cannot reach, and
 point them at their GM. Every write tool is GM-only as well.
 
@@ -132,7 +144,7 @@ point them at their GM. Every write tool is GM-only as well.
 | Find a record by name or keyword, category unknown | `search_campaign` |
 | Find prose by the words in it (a handout, a rule, a note) | `search_wiki`, then `get_wiki_page` |
 | Everything in one category, paginated | `list_entities` |
-| How things connect | `get_knowledge_graph` (political, timeline, geography) |
+| How things connect | `get_knowledge_graph` (political, timeline, geography, foundations) |
 | One entity's edges | `get_relationships` |
 | Full detail on a known entity | `get_entity` |
 | Valid field values and tags before writing | `get_entity_schema`, `get_field_options`, `get_tag_options` |
@@ -140,10 +152,13 @@ point them at their GM. Every write tool is GM-only as well.
 
 Etiquette that saves tokens and mistakes:
 
-- `search_campaign` is full-text over entity name, description, and custom fields.
-  It never touches wiki rows. It returns truncated descriptions and a relevance
-  score. Use it to find ids, then deep-dive with `get_entity`. Filter with
-  `categories` when you know the type.
+- `search_campaign` is full-text over every free-text field of an entity: name,
+  description, and the category's own text fields. As the GM it also matches the
+  GM-only `dm_*` fields and custom field values; player connections never match on
+  those. It never touches wiki rows. It returns truncated descriptions and a
+  relevance score, so a hit on a GM-only field or a custom field may not show the
+  matched text: follow up with `get_entity`. Filter with `categories` when you know
+  the type.
 - `search_wiki` is full-text over wiki page titles and block prose, and never
   touches entities. Results carry `pageId`, `pageTitle`, an optional `blockId` when
   the hit is inside a block, a snippet, and a rank. Follow up with `get_wiki_page`.
@@ -192,7 +207,10 @@ Other write rules:
 - **Relationships.** `add_relationship` routes automatically: it writes an FK field
   when one exists (`faction_id`, `parent_location_id`, `owner_npc_id`) and a
   junction row otherwise, using `relationship_type` as the edge label. Database
-  relationships auto-visualize in the knowledge graphs. Do **not** also call
+  relationships are the edges of `get_knowledge_graph`. Political ones (NPC-NPC,
+  memberships, alliances, rivalries, PC ties) also place both endpoints on the
+  campaign's Political Web in the app, so `add_to_entity_graph(graph_type=political)`
+  is never needed after `add_relationship`. Do **not** also call
   `add_to_entity_graph` or `create_entity_graph_edge` for the same link; those two
   exist only for custom edges with no database equivalent, and using them here
   creates duplicate edges.
@@ -203,7 +221,10 @@ Other write rules:
   `add_thread_progression` takes `thread_id`, `session_id`, `progression_type`
   (start, update, complication, resolution), and a `title`. Link it to a session key
   event with `key_event_id` when you have one; `key_event_index` is legacy and
-  breaks if key events are reordered. GM-role connections only.
+  breaks if key events are reordered. GM-role connections only. Every thread carries
+  a `status` of open or resolved; `get_open_threads` with `status=all` interleaves
+  both kinds inside major and minor, so read `status` rather than testing for
+  `resolvedSessionId`.
 - **Foundations.** The six `*_foundation_*` tools and `update_world_foundations`
   change the frame every future answer is generated inside. Confirm with the GM
   before writing there.
@@ -317,7 +338,8 @@ What this means for you:
 
 ### Parse prep notes into entities
 
-1. `get_constitution`, `get_campaign_context` if not already loaded this session.
+1. `get_constitution` if not already loaded this session (its campaignContext block
+   covers genre and vocabulary).
 2. `get_entity_catalog`. Match every proper noun in the notes against it.
 3. For each name that already exists, `get_entity`, then `update_entity` with only
    the new information. Do not recreate.
@@ -335,16 +357,25 @@ What this means for you:
 
 ### File a session recap
 
-1. `get_narrative_state` for what was already open going in.
+1. `get_narrative_state` for what was already open going in. On a GM connection the
+   previous recaps' dmConsequences and dmBehindScenes arrive with it, so you know
+   what the party has not yet realized without reading each recap.
 2. `get_entity_schema("session_recaps")`, then `create_entity` with
    `session_number`, `summary`, `key_events`, `pcs_present_ids`, and
-   `dm_consequences` for anything the party has not realized yet.
+   `dm_consequences` for anything the party has not realized yet. `key_events` is an
+   array of `{description, important, is_canonical_fact}`; `id` and `order` are
+   assigned by the server. Set `important` only for campaign-defining beats and
+   `is_canonical_fact` for facts that should surface in
+   `get_narrative_state.canonicalFacts`.
 3. `get_open_threads`. For each thread the session touched,
    `add_thread_progression` against the new session id with the right
    `progression_type`, linked to a key event where one applies.
-4. `resolve_open_thread` for anything actually closed. `create_open_thread` for new
-   loose ends, with the type that fits: consequence, promise, mystery,
-   foreshadowing, callback_opportunity.
+4. `resolve_open_thread` for anything actually closed; it records a resolution
+   progression at that session on its own, so add a resolution progression first
+   only when the closing entry should carry its own title, description, or key event
+   link. `create_open_thread` for new loose ends, with the type that fits:
+   consequence, promise, mystery, foreshadowing, callback_opportunity; passing
+   `created_session_id` logs the start progression for you.
 5. `update_entity` on NPCs, factions, and locations the session changed.
 6. If the table keeps a written recap in the wiki, add it as a page under the
    sessions page with tokens for the NPCs and places it mentions.
@@ -400,8 +431,8 @@ What this means for you:
 
 ## Anti-patterns
 
-- Answering a campaign question before `get_constitution` and
-  `get_campaign_context`. This is the single biggest failure mode.
+- Answering a campaign question before `get_constitution` (or, as a player,
+  `get_campaign_context`). This is the single biggest failure mode.
 - Filling a gap with generic fantasy or sci-fi content instead of saying the data
   does not cover it, or asking.
 - Creating an entity without checking `get_entity_catalog` for a near-duplicate.
@@ -420,7 +451,7 @@ What this means for you:
 - Sharing wiki content with players by marking it `player-knowledge`.
 - Treating a visibility filter as an obstacle, or a "page not found" as a clue.
 - Rewriting a thread's text instead of logging a progression, which destroys the
-  session-over-session history the timeline graph is built on.
+  session-over-session history that `get_thread_progressions` returns.
 
 ## Reference
 

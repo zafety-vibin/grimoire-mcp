@@ -9,12 +9,12 @@ vehicles.
 
 | Tool | Use it for |
 |---|---|
-| `search_campaign` | Full-text across name, description, and custom fields. Filter with `categories`. Returns id, category, name, truncated description, status, tags, relevance. Your default "find the thing" call. |
+| `search_campaign` | Full-text over every free-text field of an entity; GM tokens also match `dm_*` fields and custom field values, player tokens never do. Filter with `categories`. Returns id, category, name, truncated description, status, tags, relevance. A hit on a GM-only field may not show in the truncated description, so follow up with `get_entity`. Your default "find the thing" call. |
 | `get_entity` | Full detail on one entity by id. Layer 5. |
 | `list_entities` | Enumerate one category with offset and limit. Status filter: active (default), draft, hidden, archived. |
 | `get_field_options` | Existing values already in use for a select field in this campaign. |
 | `get_tag_options` | Tags already in use. Call before tagging. |
-| `get_entity_schema` | The writable shape of a category: global fields, default fields, select option hints, campaign custom fields. Call before every create or update. |
+| `get_entity_schema` | The writable shape of a category: global fields, default fields, select option hints, campaign custom fields. json-type default fields carry a `shape` string describing the element shape (for example `session_recaps.key_events`). Call before every create or update. |
 | `create_entity` | One entity. Default fields go inside `custom_fields` and land in real columns. |
 | `update_entity` | Partial update. Send only what changed. |
 | `delete_entity` | Transactional, with graph cleanup. |
@@ -24,26 +24,28 @@ vehicles.
 
 | Tool | Use it for |
 |---|---|
-| `add_relationship` | Typed edge between two entities. Routes to an FK field when one exists, otherwise a junction row labelled with `relationship_type`. Auto-visualizes in the knowledge graphs. |
-| `get_relationships` | One entity's edges. |
+| `add_relationship` | Typed edge between two entities. Routes to an FK field when one exists, otherwise a junction row labelled with `relationship_type`. Appears as an edge in `get_knowledge_graph`; political relationships also put both endpoints on the app's Political Web. |
+| `get_relationships` | One entity's edges, junction rows and FK rows, both real. On an incoming junction row `targetCategory` is the queried entity's category and `sourceCategory` is the other side. A table reachable from both sides (`faction_members`) is listed once per call. An FK plus a roster row for the same faction is one membership, not two. |
 | `delete_relationship` | Remove an edge. |
 
 FK fields worth knowing: `npcs.faction_id`, `npcs.superior_npc_id`,
-`npcs.location_ids[]`, `locations.parent_location_id`,
-`locations.connected_location_ids[]`, `factions.leader_id`,
-`factions.allied_faction_ids[]`, `factions.rival_faction_ids[]`,
-`quests.quest_giver_id`, `items.owner_npc_id`, `items.location_id`.
+`locations.parent_location_id`, `factions.leader_id`, `quests.quest_giver_id`,
+`quests.started_session_id`, `quests.completed_session_id`, `items.owner_npc_id`,
+`items.owner_pc_id`, `items.location_id`, `items.quest_id`,
+`planar_forces.high_priest_id`, `custom_mechanics.world_rule_id`.
 
 To draw faction membership, use
-`add_relationship(npcs -> factions, "primary_faction")`.
+`add_relationship(npcs -> factions, "primary_faction")`. `add_relationship` with any
+other `relationship_type` (member, agent, captain) writes a `faction_members` roster
+row instead; it never sets both.
 
 ## Knowledge graphs (8)
 
 | Tool | Use it for |
 |---|---|
-| `get_constitution` | Layer 1. Campaign summary, Campaign Bible summary, foundation nodes. Call first. |
-| `get_entity_catalog` | Layer 2. Every active entity as id plus name, by type, plus compact graph node and edge lists and per-type counts. Cheap. |
-| `get_knowledge_graph` | Layer 3 with `attention=true`, Layer 4 without. Types: political, timeline, geography. Nodes carry entity data, edges include database relationships automatically. |
+| `get_constitution` | Layer 1. Campaign summary, Campaign Bible summary, World Foundations nodes, the campaignContext block, plus attention-only compact node and edge maps (`graphStructures`) for the political, geography, and timeline projections; political edges use `get_knowledge_graph`'s vocabulary. Call first. |
+| `get_entity_catalog` | Layer 2. Every active entity as id plus name, by type, plus compact graph node and edge lists and per-type counts. Compact edges use the same types as `get_knowledge_graph` and carry source, target and type only. Cheap. |
+| `get_knowledge_graph` | Layer 3 with `attention=true`, Layer 4 without. Types: political, timeline, geography, foundations (foundations is portal-capped like the other three). Nodes carry entity data; edges are `member_of`, `ally`, `rival` and the NPC-to-NPC relationship types for political, `located_in` (child to parent) for geography, and `followed_by` plus the session-to-entity types for timeline. |
 | `list_entity_graphs` | Custom graphs beyond the three built-ins. |
 | `get_entity_graph` | One custom graph in full. |
 | `add_to_entity_graph` | Put an entity on a custom graph. Only for graphs, not database links. |
@@ -52,12 +54,18 @@ To draw faction membership, use
 
 The three built-in projections:
 
-- **political**: factions, NPCs, player characters, alliances, rivalries,
-  memberships. The live relationship status of the campaign.
+- **political**: factions, NPCs, alliances, rivalries, memberships, NPC-to-NPC
+  relationships. The live relationship status of the campaign. Player characters are
+  not on it today; read their ties with `get_relationships`.
 - **timeline**: sessions and events in sequence, with entities connected to the
   sessions they appeared in. This is what establishes "recent" versus "old."
-- **geography**: locations in a hierarchy (plane, world, continent, downward) with
-  spatial relationships between siblings, plus where NPCs and items sit inside it.
+  Session-to-entity edges are typed `npc_encountered`, `location_visited`,
+  `quest_progressed`, `loot_acquired`, `creature_encountered`, `pc_present`,
+  `planar_force_mentioned` and `lore_learned`; entity endpoints are stub nodes
+  carrying the `get_entity` category, so follow with `get_entity`.
+- **geography**: locations in a hierarchy (plane, world, continent, downward), drawn
+  as `located_in` edges from child to parent. Sibling links, and where NPCs and items
+  sit inside it, are not drawn today; read those with `get_relationships`.
 
 ## World foundations (6)
 
@@ -77,9 +85,9 @@ answer is generated inside. Confirm with the GM before writing here.
 
 | Tool | Use it for |
 |---|---|
-| `get_open_threads` | Unresolved narrative obligations, grouped major and minor. Types: consequence, promise, mystery, foreshadowing, callback_opportunity. |
-| `create_open_thread` | New loose end. |
-| `resolve_open_thread` / `unresolve_open_thread` | Close or reopen. |
+| `get_open_threads` | Unresolved narrative obligations, grouped major and minor. Types: consequence, promise, mystery, foreshadowing, callback_opportunity. Every thread carries a `status` of open or resolved; `status=all` interleaves both kinds inside the groups, so read the field rather than testing for `resolvedSessionId`. |
+| `create_open_thread` | New loose end. With `created_session_id` a start progression is logged for you. |
+| `resolve_open_thread` / `unresolve_open_thread` | Close (logs a resolution progression at that session unless one exists) or reopen (progression history is kept). |
 | `update_open_thread` | Edit thread metadata. |
 | `get_thread_progressions` | How a thread has moved session over session. |
 | `add_thread_progression` | Log a movement: start, update, complication, resolution. Link with `key_event_id` when possible. GM role only. |
@@ -105,20 +113,26 @@ to real records: `@[Name](entity://category/uuid)` for entities and
 `@[Title](page://uuid)` for pages. Read a block's `text`, edit around the tokens,
 and write it back verbatim to keep the links.
 
-Multi-block flow: `batch_create_wiki_blocks`, then `get_wiki_page` to verify order,
-then `batch_reorder_wiki_blocks`. Single-block creates have a positioning race.
+Multi-block flow: `batch_create_wiki_blocks` (up to 50) chains blocks in array order,
+so stored order matches your array; no verification or reorder pass is needed.
+Sequential single creates are ordered too; only concurrent create calls can
+interleave. `batch_reorder_wiki_blocks` is for when you actually want a different
+order, passing every block id on the page.
 
-Block visibility: `inherit` (default), `common-knowledge`, `dm-secret`,
-`player-knowledge`. All wiki tools work in the campaign wiki space only; a page the
-connected role cannot reach answers "page not found" everywhere.
+Block visibility: `inherit` (default; not allowed on a root page),
+`common-knowledge`, `dm-secret`, `player-knowledge` (on wiki content a GM tracking
+marker today, see the Visibility section of SKILL.md), `system` (rules and meta
+notes; players read it like common-knowledge). All wiki tools work in the campaign
+wiki space only; a page the connected role cannot reach answers "page not found"
+everywhere.
 
 ## Campaign meta (5)
 
 | Tool | Use it for |
 |---|---|
 | `current_campaign` | Campaign, user, and role bound to this session. First call, always. |
-| `get_campaign_context` | Genre, ruleset, setting technology and magic levels, which categories exist and what this campaign calls them. |
-| `get_narrative_state` | Layer 1.5. Recent sessions with summaries and key events, open threads by weight, canonical facts, active arcs, recent observations. `recent_session_count` defaults to 3, max 10. |
+| `get_campaign_context` | Genre, ruleset, setting technology and magic levels, which categories exist and what this campaign calls them. Also embedded verbatim as `campaignContext` in `get_constitution`, `get_narrative_state` and `get_entity_catalog`; fetch it standalone only when none of those are loaded. |
+| `get_narrative_state` | Layer 1.5. Recent sessions with summaries and key events, open threads by weight, canonical facts, active arcs, recent observations. GM connections also get `dmConsequences` and `dmBehindScenes` per session. `recent_session_count` defaults to 3, max 10. |
 | `get_campaign_bible` | Full Campaign Bible blocks. `get_constitution` returns a summary; this returns the blocks and their ids. |
 | `update_campaign_bible` | Edit Bible blocks. Pass the simple content shape and let the server normalize. |
 
@@ -138,7 +152,7 @@ time.
 |---|---|
 | Player: permanently denied | `get_constitution`, `get_campaign_bible`, `get_relationships`, `get_open_threads`, `get_thread_progressions`, `list_entity_graphs`, `get_entity_graph` |
 | Player: allowed only when the portal policy is `revealed` or `open` | `get_campaign_context`, `get_narrative_state`, `get_entity_catalog`, `get_knowledge_graph` |
-| Player: always allowed | `current_campaign`, `search_campaign`, `search_wiki`, `get_wiki_tree`, `get_wiki_page` |
+| Player: always allowed | `current_campaign`, `search_campaign`, `search_wiki`, `get_wiki_tree`, `get_wiki_page`, `get_entity`, `list_entities`, `get_entity_schema`, `get_field_options`, `get_tag_options` (`get_entity` and `list_entities` apply the dm-secret row filter; the other three carry no player-role gate today) |
 | GM only | every write tool, and everything in the first two rows |
 
 Player-visible results are additionally visibility-filtered in the query layer, so
