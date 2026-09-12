@@ -361,6 +361,27 @@
       "inputSchema": {
         "type": "object"
       }
+    },
+    {
+      "name": "create_session_observation",
+      "description": "Mark a moment from a session worth keeping.\n\nOnly available to GM-role connections.\n\nAn observation colours one session recap: a note the GM wants to come back to,\nwith a type and an importance rating. It is not a thread and never resolves;\nuse create_open_thread when something opens a narrative obligation that will\nlater be closed.\n\nTypes: highlight (a memorable moment), state_change (something changed\npermanently), revelation (a secret came out), development (character or story\nprogression). Defaults to highlight. An unrecognised type is refused by name\nrather than stored.\n\nImportance runs 0 to 5 and defaults to 3. Observations of importance 3 and\nabove are the ones surfaced most prominently to readers.\n\nOptionally attach the observation to one entity with entity_type and entity_id\ntogether. Both or neither.\n\nReturns the stored observation including its id, which is what\nupdate_session_observation and delete_session_observation take.",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "update_session_observation",
+      "description": "Change an existing session observation.\n\nOnly available to GM-role connections.\n\nEvery field except observation_id is optional; omitted fields keep their\ncurrent values. The observation stays on the session it was created against:\nthis tool cannot move one between sessions.\n\nTypes: highlight (a memorable moment), state_change (something changed\npermanently), revelation (a secret came out), development (character or story\nprogression). Defaults to highlight. An unrecognised type is refused by name\nrather than stored.\n\nAn observation belonging to another campaign is answered exactly like one that\ndoes not exist.\n\nget_narrative_state does not return observation ids, so take the id from\ncreate_session_observation or from get_knowledge_graph with\ngraph_type='timeline'.",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "delete_session_observation",
+      "description": "Remove a session observation.\n\nOnly available to GM-role connections.\n\nThis removes the note, not the session it was attached to and not any entity it\nreferenced. An observation belonging to another campaign is answered exactly\nlike one that does not exist.",
+      "inputSchema": {
+        "type": "object"
+      }
     }
   ],
   "resources": [

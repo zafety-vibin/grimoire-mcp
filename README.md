@@ -7,7 +7,7 @@
 | **Endpoint** | `https://api.ttrpg.bot/mcp` |
 | **Transport** | Streamable HTTP (MCP spec 2025-06-18) |
 | **Auth** | OAuth 2.1 with PKCE, one-click consent flow |
-| **Tools** | 49 across 7 groups (21 read, 28 write) |
+| **Tools** | 52 across 8 groups (21 read, 31 write) |
 | **Registry** | `bot.ttrpg/grimoire` in the official MCP Registry |
 | **Web app** | https://www.ttrpg.bot |
 
@@ -44,7 +44,7 @@ Auth is OAuth 2.1 with PKCE; the client opens a browser sign-in on first connect
 
 ## Key features of Grimoire
 
-- **Live typed state, not flat files.** 49 tools (21 read, 28 write) over a typed campaign database with 14 entity schemas. One narrative-state call returns recent sessions, open plot threads, active arcs, and canon facts.
+- **Live typed state, not flat files.** 52 tools (21 read, 31 write) over a typed campaign database with 14 entity schemas. One narrative-state call returns recent sessions, open plot threads, active arcs, and canon facts.
 - **Read and write, so state stays current.** Create and update entities, log thread progressions, and write wiki pages, blocks, and tables from the conversation, so canon updates as you prep instead of going stale in a file.
 - **The wiki is part of the world.** Full-text wiki search, pages with breadcrumbs and children, tables that round-trip as markdown grids, and entity and page links that resolve to real records instead of string matches.
 - **Knowledge-graph queries** across political, geographic, and timeline projections, with GM visibility filtering applied server-side.
@@ -63,7 +63,7 @@ Auth is OAuth 2.1 with PKCE; the client opens a browser sign-in on first connect
 
 ## The toolbox
 
-49 tools across seven groups.
+52 tools across eight groups.
 
 **Entities** (10): `search_campaign`, `get_entity`, `list_entities`, `get_field_options`, `get_tag_options`, `get_entity_schema`, `create_entity`, `update_entity`, `delete_entity`, `batch_create_entities`. Covers all 14 entity types: NPCs, Locations, Factions, Quests, Items, Player Characters, Creatures, Vehicles, Lore Entries, World Rules, Planar Forces, Session Recaps, Session Preps, Custom Mechanics. `get_entity_schema` reports the exact fields a category accepts, native columns, select options, and the campaign's custom fields, so writes land in the right place instead of a catch-all bag.
 
@@ -78,6 +78,8 @@ Auth is OAuth 2.1 with PKCE; the client opens a browser sign-in on first connect
 **Wiki** (10): `get_wiki_tree`, `get_wiki_page`, `search_wiki`, `create_wiki_page`, `create_wiki_block`, `update_wiki_block`, `move_wiki_block`, `delete_wiki_block`, `batch_create_wiki_blocks`, `batch_reorder_wiki_blocks`. Block-based collaborative pages the AI reads and edits like you do. `search_wiki` is full-text over page titles and block prose (`search_campaign` covers entities only). Tables read and write as plain markdown grids, and entity links (`@[Name](entity://category/uuid)`) and page links (`@[Title](page://uuid)`) round-trip inside any block, including table cells, so a page the AI writes is linked to your records the same way one you typed would be.
 
 **Campaign meta** (5): `current_campaign`, `get_campaign_context`, `get_narrative_state`, `get_campaign_bible`, `update_campaign_bible`. `get_narrative_state` aggregates recent sessions, open threads, canonical facts, and active arcs into one view.
+
+**Session observations** (3): `create_session_observation`, `update_session_observation`, `delete_session_observation`. GM-only notes that colour a session: a typed, rated moment worth coming back to. Reading them needs no tool of its own, because `get_narrative_state` returns the observations on the sessions it summarizes and `get_knowledge_graph` returns the ones on the timeline it draws.
 
 The server also exposes one MCP resource, `campaign://wiki`, which lists the campaign's wiki pages and their hierarchy.
 

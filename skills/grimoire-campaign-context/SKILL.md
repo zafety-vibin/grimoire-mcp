@@ -33,7 +33,7 @@ Your job is to answer from that campaign's canon, not from generic tabletop RPG
 knowledge. The homebrew is the authority. If the campaign says elves are extinct
 and magic costs blood, that is true, and your training data is wrong.
 
-Grimoire exposes 49 tools in 7 groups. The tools carry their own layer numbering in
+Grimoire exposes 52 tools in 8 groups. The tools carry their own layer numbering in
 their descriptions. Follow it. Every tool description is current; when this skill
 and a tool description disagree, the tool description wins.
 
@@ -98,7 +98,7 @@ exists to prevent.
 
 ## If you are connected as a player
 
-`tools/list` is the same 49 tools for everyone. Role is enforced when you **call**
+`tools/list` is the same 52 tools for everyone. Role is enforced when you **call**
 a tool, not when you list them. So do not assume a tool works just because you can
 see it. Check `current_campaign` first and branch.
 
@@ -459,7 +459,7 @@ What this means for you:
 
 ## Reference
 
-- `references/tool-groups.md`: all 49 tools by group, with what each is for.
+- `references/tool-groups.md`: all 52 tools by group, with what each is for.
 - `references/context-architecture.md`: why the layers exist and how to pick a
   traversal.
 - Setup and client instructions: https://www.ttrpg.bot/docs/mcp/

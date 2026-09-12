@@ -1,6 +1,6 @@
 # Grimoire MCP tool reference
 
-49 tools across 7 groups. 21 read, 28 write. Categories are: npcs, locations,
+52 tools across 8 groups. 21 read, 31 write. Categories are: npcs, locations,
 factions, quests, items, lore_entries, session_recaps, creatures,
 player_characters, world_rules, planar_forces, custom_mechanics, session_preps,
 vehicles.
@@ -92,6 +92,23 @@ answer is generated inside. Confirm with the GM before writing here.
 | `get_thread_progressions` | How a thread has moved session over session. |
 | `add_thread_progression` | Log a movement: start, update, complication, resolution. Link with `key_event_id` when possible. GM role only. |
 
+## Session observations (3)
+
+| Tool | Use it for |
+|---|---|
+| `create_session_observation` | Mark a moment from one session worth keeping: a title, an optional description, a type, and an importance from 0 to 5. Types: highlight, state_change, revelation, development; an unrecognised one is refused by name rather than stored. Optionally attach one entity with `entity_type` and `entity_id` together, both or neither. GM role only. Returns the stored row including the id the other two take. |
+| `update_session_observation` | Edit one. Omitted fields keep their current values, and it cannot move an observation to a different session. GM role only. |
+| `delete_session_observation` | Remove one. The session it was attached to, and any entity it referenced, are untouched. GM role only. |
+
+An observation is not a thread: it never opens and never resolves. Reach for the
+thread tools when something creates an obligation that will later be closed.
+
+There is no read tool here, on purpose. `get_narrative_state` returns the
+observations belonging to the sessions it summarizes, and `get_knowledge_graph`
+with `graph_type='timeline'` returns the ones on the graph it draws. Only the
+latter carries ids, so take an id from there, or from
+`create_session_observation`, when you intend to edit.
+
 ## Wiki (10)
 
 Block-based collaborative pages. `get_wiki_tree`, `get_wiki_page`, `search_wiki`,
@@ -145,7 +162,7 @@ same information through the tool interface.
 
 ## Role gating at a glance
 
-`tools/list` returns the same 49 tools regardless of role. Gating happens at call
+`tools/list` returns the same 52 tools regardless of role. Gating happens at call
 time.
 
 | Availability | Tools |
