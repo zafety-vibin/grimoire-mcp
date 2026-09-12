@@ -300,6 +300,11 @@ block except the title, allows only text, heading, bullet, numbered, quote,
 callout, divider, and image, and is create-then-delete, so a failed write leaves the
 old content in place.
 
+Campaign Bible blocks are GM Secret by default. Set a block to `common-knowledge`
+only when players may know it, such as world mechanics or everyday life; leave
+secrets and the campaign spine at the default. The Bible is never returned to
+player connections, and it cannot be renamed.
+
 ## Visibility is not yours to negotiate
 
 Every entity, wiki page, wiki block, and graph node carries a visibility value:
@@ -316,6 +321,10 @@ Every entity, wiki page, wiki block, and graph node carries a visibility value:
 - `inherit` (wiki only): a block follows its page; a child page follows the page
   block that links it, then its parent chain. The sane default for body content.
   Not allowed on a root page.
+
+On the Campaign Bible, `inherit` resolves to GM Secret whatever the page says, so
+Bible blocks are GM Secret by default. Mark a Bible block `common-knowledge` when
+players may know it.
 
 This is enforced in the backend query layer, not in the response text. A player-role
 connection never receives GM-secret rows in the first place, and a page it cannot

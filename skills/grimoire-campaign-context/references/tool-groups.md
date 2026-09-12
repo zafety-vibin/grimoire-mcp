@@ -150,8 +150,10 @@ everywhere.
 | `current_campaign` | Campaign, user, and role bound to this session. First call, always. |
 | `get_campaign_context` | Genre, ruleset, setting technology and magic levels, which categories exist and what this campaign calls them. Also embedded verbatim as `campaignContext` in `get_constitution`, `get_narrative_state` and `get_entity_catalog`; fetch it standalone only when none of those are loaded. |
 | `get_narrative_state` | Layer 1.5. Recent sessions with summaries and key events, open threads by weight, canonical facts, active arcs, recent observations. GM connections also get `dmConsequences` and `dmBehindScenes` per session. `recent_session_count` defaults to 3, max 10. |
-| `get_campaign_bible` | Full Campaign Bible blocks. `get_constitution` returns a summary; this returns the blocks and their ids. |
-| `update_campaign_bible` | Edit Bible blocks. Pass the simple content shape and let the server normalize. |
+| `get_campaign_bible` | Full Campaign Bible blocks. `get_constitution` returns a summary; this returns the blocks and their ids. Bible blocks are GM Secret by default. |
+| `update_campaign_bible` | Edit Bible blocks. Pass the simple content shape and let the server normalize. Blocks are GM Secret by default; set `common-knowledge` only on blocks players may know (world mechanics, everyday life). |
+
+The Campaign Bible is never returned to player connections, and it cannot be renamed.
 
 ## Resources
 
