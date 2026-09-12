@@ -91,7 +91,7 @@ The server also exposes one MCP resource, `campaign://wiki`, which lists the cam
 
 Everything respects Grimoire's visibility model: `common-knowledge`, `player-knowledge`, `dm-secret`, and (wiki only) `system`, with `inherit` resolving through the block that links a wiki page and then its parent chain. The AI sees what the connected role is allowed to see and nothing more. Player connections get filtered views, and a page a player cannot reach does not exist for that connection: search, the tree, and page reads all answer not found. GM connections get the full picture.
 
-The Campaign Bible is GM Secret by default: its blocks become player-safe only when set to `common-knowledge` (world mechanics, everyday life), the Bible is never returned to player connections, and it cannot be renamed.
+The Campaign Bible is GM Secret by default. Mark a block `common-knowledge` when players may know it (world mechanics, everyday life); that records it as player-safe, but the Bible is not returned to player connections today. The Bible cannot be renamed.
 
 OAuth scopes are campaign-scoped. Granting access to one campaign does not grant access to your other campaigns, and access is revocable at any time.
 

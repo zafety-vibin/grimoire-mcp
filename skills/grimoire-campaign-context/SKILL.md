@@ -302,8 +302,9 @@ old content in place.
 
 Campaign Bible blocks are GM Secret by default. Set a block to `common-knowledge`
 only when players may know it, such as world mechanics or everyday life; leave
-secrets and the campaign spine at the default. The Bible is never returned to
-player connections, and it cannot be renamed.
+secrets and the campaign spine at the default. That marks the block player-safe
+for later, but it does not share it: the Bible is never returned to player
+connections today. The Bible cannot be renamed.
 
 ## Visibility is not yours to negotiate
 
@@ -322,9 +323,9 @@ Every entity, wiki page, wiki block, and graph node carries a visibility value:
   block that links it, then its parent chain. The sane default for body content.
   Not allowed on a root page.
 
-On the Campaign Bible, `inherit` resolves to GM Secret whatever the page says, so
-Bible blocks are GM Secret by default. Mark a Bible block `common-knowledge` when
-players may know it.
+On the Campaign Bible, `inherit` resolves to GM Secret whatever the page says, and
+the wiki-page sharing advice above does not apply: no Bible block reaches a player
+connection yet, whatever its level.
 
 This is enforced in the backend query layer, not in the response text. A player-role
 connection never receives GM-secret rows in the first place, and a page it cannot
