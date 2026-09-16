@@ -43,9 +43,9 @@ row instead; it never sets both.
 
 | Tool | Use it for |
 |---|---|
-| `get_constitution` | Layer 1. Campaign summary, Campaign Bible summary, World Foundations nodes, the campaignContext block, plus attention-only compact node and edge maps (`graphStructures`) for the political, geography, and timeline projections; political edges use `get_knowledge_graph`'s vocabulary. Call first. |
+| `get_constitution` | Layer 1. Campaign summary, Campaign Bible summary, World Foundations nodes, the campaignContext block, plus attention-only compact node and edge maps (`graphStructures`) for the political, geography, and timeline projections; political edges use `get_knowledge_graph`'s vocabulary. Call first. Player role gets its table's own constitutional layer, never the GM's: a `shared` object (`bible`, `foundations`, `graphs`) says which parts came back, and the Bible summary and foundation nodes are present only where the flag is true. |
 | `get_entity_catalog` | Layer 2. Every active entity as id plus name, by type, plus compact graph node and edge lists and per-type counts. Compact edges use the same types as `get_knowledge_graph` and carry source, target and type only. Cheap. |
-| `get_knowledge_graph` | Layer 3 with `attention=true`, Layer 4 without. Types: political, timeline, geography, foundations (foundations is portal-capped like the other three). Nodes carry entity data; edges are `member_of`, `ally`, `rival` and the NPC-to-NPC relationship types for political, `located_in` (child to parent) for geography, and `followed_by` plus the session-to-entity types for timeline. |
+| `get_knowledge_graph` | Layer 3 with `attention=true`, Layer 4 without. Types: political, timeline, geography, foundations (foundations is portal-capped like the other three). Nodes carry entity data; edges are `member_of`, `ally`, `rival` and the NPC-to-NPC relationship types for political, `located_in` (child to parent) for geography, and `followed_by` plus the session-to-entity types for timeline. Player role: foundations also needs the GM's World Foundations sharing flag, and answers the normal result `{"shared": false, "message": "..."}` when it is off; political, timeline and geography have no flag of their own and answer the player's own view, GM Secret entities and GM Secret ties dropped. |
 | `list_entity_graphs` | Custom graphs beyond the three built-ins. |
 | `get_entity_graph` | One custom graph in full. |
 | `add_to_entity_graph` | Put an entity on a custom graph. Only for graphs, not database links. |
@@ -150,10 +150,13 @@ everywhere.
 | `current_campaign` | Campaign, user, and role bound to this session. First call, always. |
 | `get_campaign_context` | Genre, ruleset, setting technology and magic levels, which categories exist and what this campaign calls them. Also embedded verbatim as `campaignContext` in `get_constitution`, `get_narrative_state` and `get_entity_catalog`; fetch it standalone only when none of those are loaded. |
 | `get_narrative_state` | Layer 1.5. Recent sessions with summaries and key events, open threads by weight, canonical facts, active arcs, recent observations. GM connections also get `dmConsequences` and `dmBehindScenes` per session. `recent_session_count` defaults to 3, max 10. |
-| `get_campaign_bible` | Full Campaign Bible blocks. `get_constitution` returns a summary; this returns the blocks and their ids. Bible blocks are GM Secret by default. |
+| `get_campaign_bible` | Full Campaign Bible blocks. `get_constitution` returns a summary; this returns the blocks and their ids. Bible blocks are GM Secret by default. Player role: only the Common Knowledge blocks, and only while the GM has Bible sharing on; sharing off, no Bible, and a failed lookup all answer the same normal result `{"shared": false, "message": "..."}`, so that answer says nothing about whether a Bible exists. |
 | `update_campaign_bible` | Edit Bible blocks. Pass the simple content shape and let the server normalize. Blocks are GM Secret by default; set `common-knowledge` only on blocks players may know (world mechanics, everyday life). |
 
-The Campaign Bible is never returned to player connections, and it cannot be renamed.
+The Campaign Bible reaches player connections only through `get_campaign_bible` and
+`get_constitution`, only the blocks the GM marked Common Knowledge, and only when the
+GM has turned sharing on. It never reaches one through the wiki tools, and it cannot
+be renamed.
 
 ## Resources
 
@@ -169,10 +172,11 @@ time.
 
 | Availability | Tools |
 |---|---|
-| Player: permanently denied | `get_constitution`, `get_campaign_bible`, `get_relationships`, `get_open_threads`, `get_thread_progressions`, `list_entity_graphs`, `get_entity_graph` |
-| Player: allowed only when the portal policy is `revealed` or `open` | `get_campaign_context`, `get_narrative_state`, `get_entity_catalog`, `get_knowledge_graph` |
+| Player: permanently denied | `get_relationships`, `get_open_threads`, `get_thread_progressions`, `list_entity_graphs`, `get_entity_graph` |
+| Player: allowed only when the portal policy is `revealed` or `open` | `get_campaign_context`, `get_narrative_state`, `get_entity_catalog`, `get_knowledge_graph`, `get_constitution`, `get_campaign_bible` |
+| Player: gated again by a GM sharing flag | `get_campaign_bible` and the Bible half of `get_constitution` need Bible sharing; `get_knowledge_graph` with `graph_type='foundations'` and the foundations half of `get_constitution` need World Foundations sharing. A flag that is off is reported as a normal not-shared result, not an error: `get_campaign_bible` and the foundations graph answer `{"shared": false, "message": "..."}`, while `get_constitution` carries the flag inside its own shared object instead |
 | Player: always allowed | `current_campaign`, `search_campaign`, `search_wiki`, `get_wiki_tree`, `get_wiki_page`, `get_entity`, `list_entities`, `get_entity_schema`, `get_field_options`, `get_tag_options` (`get_entity` and `list_entities` apply the dm-secret row filter; the other three carry no player-role gate today) |
-| GM only | every write tool, and everything in the first two rows |
+| GM only | every write tool, and everything in the first row |
 
 Player-visible results are additionally visibility-filtered in the query layer, so
 a permitted tool still returns less data for a player than for the GM.

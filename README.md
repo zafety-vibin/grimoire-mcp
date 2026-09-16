@@ -69,7 +69,7 @@ Auth is OAuth 2.1 with PKCE; the client opens a browser sign-in on first connect
 
 **Relationships** (3): `add_relationship`, `get_relationships`, `delete_relationship`. Typed edges between any two entities.
 
-**Knowledge graphs** (8): `get_constitution`, `get_entity_catalog`, `get_knowledge_graph`, `list_entity_graphs`, `get_entity_graph`, `add_to_entity_graph`, `create_entity_graph_edge`, `toggle_graph_attention`. Political, timeline, and geography projections with visibility filtering.
+**Knowledge graphs** (8): `get_constitution`, `get_entity_catalog`, `get_knowledge_graph`, `list_entity_graphs`, `get_entity_graph`, `add_to_entity_graph`, `create_entity_graph_edge`, `toggle_graph_attention`. Political, timeline, geography, and foundations projections with visibility filtering. `get_constitution` is the Layer 1 read for both roles: a GM connection gets the full constitutional layer, a player connection gets the parts the GM chose to share, each flagged in the response.
 
 **World foundations** (6): `create_foundation_node`, `update_foundation_node`, `delete_foundation_node`, `create_foundation_edge`, `delete_foundation_edge`, `update_world_foundations`. Write tools for the campaign's foundation layer, which is always loaded. Foundation nodes are world-defining concepts (a cataclysm, a hidden power, a cosmological law) connected by labeled edges, and `update_world_foundations` sets the structured World Foundations document (magic system, divine hierarchy, fundamental laws). These are the mechanical and cosmological truths of the world, distinct from database entities like NPCs and locations.
 
@@ -77,7 +77,7 @@ Auth is OAuth 2.1 with PKCE; the client opens a browser sign-in on first connect
 
 **Wiki** (10): `get_wiki_tree`, `get_wiki_page`, `search_wiki`, `create_wiki_page`, `create_wiki_block`, `update_wiki_block`, `move_wiki_block`, `delete_wiki_block`, `batch_create_wiki_blocks`, `batch_reorder_wiki_blocks`. Block-based collaborative pages the AI reads and edits like you do. `search_wiki` is full-text over page titles and block prose (`search_campaign` covers entities only). Tables read and write as plain markdown grids, and entity links (`@[Name](entity://category/uuid)`) and page links (`@[Title](page://uuid)`) round-trip inside any block, including table cells, so a page the AI writes is linked to your records the same way one you typed would be.
 
-**Campaign meta** (5): `current_campaign`, `get_campaign_context`, `get_narrative_state`, `get_campaign_bible`, `update_campaign_bible`. `get_narrative_state` aggregates recent sessions, open threads, canonical facts, and active arcs into one view.
+**Campaign meta** (5): `current_campaign`, `get_campaign_context`, `get_narrative_state`, `get_campaign_bible`, `update_campaign_bible`. `get_narrative_state` aggregates recent sessions, open threads, canonical facts, and active arcs into one view. `get_campaign_bible` returns every block to a GM connection, and only the Common Knowledge blocks to a player connection, and then only when the GM has turned Bible sharing on.
 
 **Session observations** (3): `create_session_observation`, `update_session_observation`, `delete_session_observation`. GM-only notes that colour a session: a typed, rated moment worth coming back to. Reading them needs no tool of its own, because `get_narrative_state` returns the observations on the sessions it summarizes and `get_knowledge_graph` returns the ones on the timeline it draws.
 
@@ -91,7 +91,9 @@ The server also exposes one MCP resource, `campaign://wiki`, which lists the cam
 
 Everything respects Grimoire's visibility model: `common-knowledge`, `player-knowledge`, `dm-secret`, and (wiki only) `system`, with `inherit` resolving through the block that links a wiki page and then its parent chain. The AI sees what the connected role is allowed to see and nothing more. Player connections get filtered views, and a page a player cannot reach does not exist for that connection: search, the tree, and page reads all answer not found. GM connections get the full picture.
 
-The Campaign Bible is GM Secret by default. Mark a block `common-knowledge` when players may know it (world mechanics, everyday life); that records it as player-safe, but the Bible is not returned to player connections today. The Bible cannot be renamed.
+The Campaign Bible is GM Secret by default. Mark a block `common-knowledge` when players may know it (world mechanics, everyday life); that records it as player-safe. A GM can then turn Bible sharing on, and a player connection reads those Common Knowledge blocks through `get_campaign_bible` and `get_constitution`, and nothing else. With sharing off, `get_campaign_bible` answers the normal result `{"shared": false, "message": "..."}` rather than an error, and `get_constitution` reports `shared.bible` as false with the Bible section absent, so an assistant tells the player plainly instead of retrying. The Bible cannot be renamed.
+
+World Foundations share the same way and behind their own flag: `get_knowledge_graph(graph_type='foundations')` and the `foundationNodes` of `get_constitution` reach a player connection only when the GM turned Foundations sharing on, and then only as the player-safe projection, with GM Secret nodes and every edge touching them dropped. Both flags sit behind the campaign's portal policy: a wiki-only portal refuses these reads outright, whatever the flags say.
 
 OAuth scopes are campaign-scoped. Granting access to one campaign does not grant access to your other campaigns, and access is revocable at any time.
 

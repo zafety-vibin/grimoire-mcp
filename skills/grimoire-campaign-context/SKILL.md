@@ -5,8 +5,8 @@ description: >
   skill whenever a Grimoire connector is available and the user asks anything about
   their campaign, world, NPCs, factions, locations, quests, sessions, plot threads,
   or wiki. Covers the session-start centering sequence (current_campaign,
-  get_constitution, get_narrative_state; get_campaign_context for player-role
-  sessions) that must run before
+  get_constitution, get_narrative_state; a player-role session runs the same
+  sequence and reads the shared flags get_constitution returns) that must run before
   answering campaign questions, which read tool to reach for, how to write typed
   entities without dumping data into the wrong fields, how to search, read, and write
   the wiki without breaking its links or tables, how the visibility model constrains
@@ -16,7 +16,7 @@ license: MIT
 compatibility: Any MCP client that supports remote streamable HTTP connectors, including Claude, ChatGPT, Cursor, and Claude Code.
 metadata:
   author: zafety-vibin
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # Working with Grimoire
@@ -47,19 +47,24 @@ context gets loaded deliberately instead of dumped all at once.
 
 1. `current_campaign` (free, instant). Returns the campaign, user, and **role** bound
    to this MCP session. Call it first, every time. Everything after this depends on
-   it, and the role decides which of the next two steps you are even allowed to
-   make. See "If you are connected as a player" below.
-2. `get_constitution` (Layer 1). GM role only. The world's non-negotiable truths:
+   it, and the role decides how much of the next two steps you get back.
+   See "If you are connected as a player" below.
+2. `get_constitution` (Layer 1). Both roles. The world's non-negotiable truths:
    campaign summary, Campaign Bible summary, and the world foundations graph. This
    is where the setting's defining events, cosmology, and the GM's content
-   boundaries live. It colors every downstream answer.
+   boundaries live. It colors every downstream answer. A player-role connection
+   gets its table's own constitutional layer, never the GM's: the response carries
+   a `shared` object (`bible`, `foundations`, and a `graphs` map), and the Bible
+   summary and foundation nodes are present only where the matching flag is true.
+   Read `shared` first, because a false flag means the GM did not share that part,
+   not that the call failed.
 3. The `campaignContext` block. Genre, ruleset, setting technology and magic levels,
    which entity categories this campaign uses, and what this campaign calls them.
    It rides inside the `get_constitution` response you just read, and inside
    `get_narrative_state` and `get_entity_catalog` as well, so read it there instead
    of fetching it again. `get_campaign_context` is the standalone form of the same
-   block, for a session that cannot call `get_constitution` (player role) or that
-   needs nothing but the vocabulary. Read it either way: it is how you stop saying
+   block, for a session that needs nothing but the vocabulary.
+   Read it either way: it is how you stop saying
    "NPC" when this table says "contact," and how you stop applying D&D 5e
    assumptions to a Blades-adjacent horror game.
 
@@ -103,16 +108,26 @@ a tool, not when you list them. So do not assume a tool works just because you c
 see it. Check `current_campaign` first and branch.
 
 **Permanently unavailable to a player-role connection** (returns "not available to
-player-role MCP connections"): `get_constitution`, `get_campaign_bible`,
-`get_relationships`, `get_open_threads`, `get_thread_progressions`,
-`list_entity_graphs`, `get_entity_graph`. Do not retry these, and do not treat the
-error as a transient failure.
+player-role MCP connections"): `get_relationships`, `get_open_threads`,
+`get_thread_progressions`, `list_entity_graphs`, `get_entity_graph`. That is five
+tools. Do not retry these, and do not treat the error as a transient failure.
 
 **Gated by the campaign's player portal policy**: `get_campaign_context`,
-`get_narrative_state`, `get_entity_catalog`, `get_knowledge_graph`. Under a
-`wiki-only` portal they refuse outright. Under `revealed` or `open` they work and
-return visibility-filtered results. The refusal message names the policy, so read
-it rather than guessing.
+`get_narrative_state`, `get_entity_catalog`, `get_knowledge_graph`,
+`get_constitution`, `get_campaign_bible`. Under a `wiki-only` portal they refuse
+outright. Under `revealed` or `open` they work and return visibility-filtered
+results. The refusal message names the policy, so read it rather than guessing.
+
+**Gated again by the GM's sharing flags**: `get_constitution` and
+`get_campaign_bible` for the Campaign Bible, and `get_constitution` and
+`get_knowledge_graph(graph_type='foundations')` for World Foundations. A flag that
+is off is not an error. `get_campaign_bible` and the foundations graph answer the
+normal result `{"shared": false, "message": "..."}`, and `get_constitution` simply
+carries `shared.bible` or `shared.foundations` false with that part absent. Say so
+plainly and point the user at their GM; retrying changes nothing. With the Bible
+flag on you get only the blocks the GM marked `common-knowledge`; with the
+Foundations flag on you get the player-safe projection, GM Secret nodes and every
+edge touching them dropped, and never `aiGuidance`.
 
 **Always available to a player**: `current_campaign`, `search_campaign`,
 `search_wiki`, `get_wiki_tree`, `get_wiki_page`, `get_entity`, `list_entities`,
@@ -123,12 +138,15 @@ answers "page not found" rather than "forbidden", so a not-found is not evidence
 that something is being hidden.
 
 So a player-role centering sequence is: `current_campaign`, then
-`get_campaign_context` (if the portal allows it), then `get_wiki_tree`,
-`search_wiki`, and `search_campaign` for everything else. `get_narrative_state` and
+`get_constitution`, and read its `shared` object to learn what this table actually
+gives you. That one call already carries the campaignContext block, the player's
+campaign summary, and whichever of the Bible and the foundations the GM shared, so
+you rarely need `get_campaign_context` on its own. Then `get_wiki_tree`,
+`search_wiki`, and `search_campaign` for everything else; `get_narrative_state` and
 `get_entity_catalog` embed the same campaignContext block when the portal allows
-them, so one fetch is enough. You will not get the
-constitution. Say so plainly if the user asks for world truths you cannot reach, and
-point them at their GM. Every write tool is GM-only as well.
+them, so one fetch is enough. When `shared` says a part is not shared, say so
+plainly if the user asks for world truths you cannot reach, and point them at their
+GM. Every write tool is GM-only as well.
 
 ## Choosing a read tool
 
@@ -302,9 +320,11 @@ old content in place.
 
 Campaign Bible blocks are GM Secret by default. Set a block to `common-knowledge`
 only when players may know it, such as world mechanics or everyday life; leave
-secrets and the campaign spine at the default. That marks the block player-safe
-for later, but it does not share it: the Bible is never returned to player
-connections today. The Bible cannot be renamed.
+secrets and the campaign spine at the default. That marks the block player-safe,
+and it is the GM's separate sharing switch that actually hands it over. The Bible
+reaches player connections only through `get_campaign_bible` and
+`get_constitution`, only those Common Knowledge blocks, and only while sharing is
+on. The Bible cannot be renamed.
 
 ## Visibility is not yours to negotiate
 
@@ -324,8 +344,10 @@ Every entity, wiki page, wiki block, and graph node carries a visibility value:
   Not allowed on a root page.
 
 On the Campaign Bible, `inherit` resolves to GM Secret whatever the page says, and
-the wiki-page sharing advice above does not apply: no Bible block reaches a player
-connection yet, whatever its level.
+the wiki-page sharing advice above does not apply: a Bible block reaches a player
+connection only when it is `common-knowledge` and the GM has Bible sharing on, and
+only through `get_campaign_bible` and `get_constitution`. It never reaches one
+through the wiki tools.
 
 This is enforced in the backend query layer, not in the response text. A player-role
 connection never receives GM-secret rows in the first place, and a page it cannot
@@ -445,8 +467,8 @@ What this means for you:
 
 ## Anti-patterns
 
-- Answering a campaign question before `get_constitution` (or, as a player,
-  `get_campaign_context`). This is the single biggest failure mode.
+- Answering a campaign question before `get_constitution`, whatever the role. This
+  is the single biggest failure mode.
 - Filling a gap with generic fantasy or sci-fi content instead of saying the data
   does not cover it, or asking.
 - Creating an entity without checking `get_entity_catalog` for a near-duplicate.

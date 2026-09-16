@@ -24,8 +24,10 @@ It arrives paired with the `campaignContext` block, which tells you the genre, t
 ruleset, the technology and magic levels, and this campaign's own vocabulary for its
 categories. That block rides inside this response, and inside `get_narrative_state`
 and `get_entity_catalog`, so `get_campaign_context` is the standalone form of it,
-for a player-role session that cannot call `get_constitution` at all. Together they
-answer "what kind of world is this and how do I talk about it."
+for a session that needs nothing but the vocabulary. Together they
+answer "what kind of world is this and how do I talk about it." A player-role
+connection receives its own constitutional layer, carrying a `shared` object that
+names which parts the GM turned on.
 
 **Layer 1.5, Narrative state.** `get_narrative_state`. Where the story is right now:
 last three sessions with summaries and key events, plus each session's
