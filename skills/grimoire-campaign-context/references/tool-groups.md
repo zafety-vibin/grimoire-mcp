@@ -9,12 +9,12 @@ vehicles.
 
 | Tool | Use it for |
 |---|---|
-| `search_campaign` | Full-text over every free-text field of an entity; GM tokens also match `dm_*` fields and custom field values, player tokens never do. Filter with `categories`. Returns id, category, name, truncated description, status, tags, relevance. A hit on a GM-only field may not show in the truncated description, so follow up with `get_entity`. Your default "find the thing" call. |
-| `get_entity` | Full detail on one entity by id. Layer 5. |
-| `list_entities` | Enumerate one category with offset and limit. Status filter: active (default), draft, hidden, archived. |
-| `get_field_options` | Existing values already in use for a select field in this campaign. |
+| `search_campaign` | Full-text over every free-text field of an entity; GM tokens also match `dm_*` fields and custom field values, player tokens never do. Filter with `categories`. Returns id, category, name, truncated description, status (GM connections only), tags, relevance. A hit on a GM-only field may not show in the truncated description, so follow up with `get_entity`. Your default "find the thing" call. |
+| `get_entity` | Full detail on one entity by id. Layer 5. Player role: the player portal's own entry, with the custom fields the GM shows players under `shared_fields`; on one of the player's own characters (from `current_campaign`) it also carries `my_character`, `archived`, the full `key_items` and `editable_custom_fields`. |
+| `list_entities` | Enumerate one category with offset and limit. Status filter: active (default), draft, hidden, archived. Player role: exactly the portal's rows for that player; the status filter is ignored. |
+| `get_field_options` | Existing values already in use for a select field in this campaign. A player gets a campaign-defined custom field's options only when the GM shows that field to players. |
 | `get_tag_options` | Tags already in use. Call before tagging. |
-| `get_entity_schema` | The writable shape of a category: global fields, default fields, select option hints, campaign custom fields. json-type default fields carry a `shape` string describing the element shape (for example `session_recaps.key_events`). Call before every create or update. |
+| `get_entity_schema` | The writable shape of a category: global fields, default fields, select option hints, campaign custom fields (each with `isDMOnly` and `showToPlayers`; only a `showToPlayers` field's value reaches players). json-type default fields carry a `shape` string describing the element shape (for example `session_recaps.key_events`). Call before every create or update. |
 | `create_entity` | One entity. Default fields go inside `custom_fields` and land in real columns. |
 | `update_entity` | Partial update. Send only what changed. |
 | `delete_entity` | Transactional, with graph cleanup. |
@@ -45,7 +45,7 @@ row instead; it never sets both.
 |---|---|
 | `get_constitution` | Layer 1. Campaign summary, Campaign Bible summary, World Foundations nodes, the campaignContext block, plus attention-only compact node and edge maps (`graphStructures`) for the political, geography, and timeline projections; political edges use `get_knowledge_graph`'s vocabulary. Call first. Player role gets its table's own constitutional layer, never the GM's: a `shared` object (`bible`, `foundations`, `graphs`) says which parts came back, and the Bible summary and foundation nodes are present only where the flag is true. |
 | `get_entity_catalog` | Layer 2. Every active entity as id plus name, by type, plus compact graph node and edge lists and per-type counts. Compact edges use the same types as `get_knowledge_graph` and carry source, target and type only. Cheap. |
-| `get_knowledge_graph` | Layer 3 with `attention=true`, Layer 4 without. Types: political, timeline, geography, foundations (foundations is portal-capped like the other three). Nodes carry entity data; edges are `member_of`, `ally`, `rival` and the NPC-to-NPC relationship types for political, `located_in` (child to parent) for geography, and `followed_by` plus the session-to-entity types for timeline. Player role: foundations also needs the GM's World Foundations sharing flag, and answers the normal result `{"shared": false, "message": "..."}` when it is off; political, timeline and geography have no flag of their own and answer the player's own view, GM Secret entities and GM Secret ties dropped. |
+| `get_knowledge_graph` | Layer 3 with `attention=true`, Layer 4 without. Types: political, timeline, geography, foundations (foundations is portal-capped like the other three). Nodes carry entity data; edges are `member_of`, `ally`, `rival` and the NPC-to-NPC relationship types for political, `located_in` (child to parent) for geography, and `followed_by` plus the session-to-entity types for timeline. Player role: foundations also needs the GM's World Foundations sharing flag, and answers the normal result `{"shared": false, "message": "..."}` when it is off; political, timeline and geography follow the GM's per-graph portal sharing switches, answer the same not-shared result when the GM has not shared that graph, and otherwise answer exactly the player portal's view of it, GM Secret entities, unmet entities and GM Secret ties dropped. |
 | `list_entity_graphs` | Custom graphs beyond the three built-ins. |
 | `get_entity_graph` | One custom graph in full. |
 | `add_to_entity_graph` | Put an entity on a custom graph. Only for graphs, not database links. |
@@ -147,7 +147,7 @@ everywhere.
 
 | Tool | Use it for |
 |---|---|
-| `current_campaign` | Campaign, user, and role bound to this session. First call, always. |
+| `current_campaign` | Campaign, user, and role bound to this session; a player token also lists the player's own characters. First call, always. |
 | `get_campaign_context` | Genre, ruleset, setting technology and magic levels, which categories exist and what this campaign calls them. Also embedded verbatim as `campaignContext` in `get_constitution`, `get_narrative_state` and `get_entity_catalog`; fetch it standalone only when none of those are loaded. |
 | `get_narrative_state` | Layer 1.5. Recent sessions with summaries and key events, open threads by weight, canonical facts, active arcs, recent observations. GM connections also get `dmConsequences` and `dmBehindScenes` per session. `recent_session_count` defaults to 3, max 10. |
 | `get_campaign_bible` | Full Campaign Bible blocks. `get_constitution` returns a summary; this returns the blocks and their ids. Bible blocks are GM Secret by default. Player role: only the Common Knowledge blocks, and only while the GM has Bible sharing on; sharing off, no Bible, and a failed lookup all answer the same normal result `{"shared": false, "message": "..."}`, so that answer says nothing about whether a Bible exists. |
@@ -173,9 +173,9 @@ time.
 | Availability | Tools |
 |---|---|
 | Player: permanently denied | `get_relationships`, `get_open_threads`, `get_thread_progressions`, `list_entity_graphs`, `get_entity_graph` |
-| Player: allowed only when the portal policy is `revealed` or `open` | `get_campaign_context`, `get_narrative_state`, `get_entity_catalog`, `get_knowledge_graph`, `get_constitution`, `get_campaign_bible` |
-| Player: gated again by a GM sharing flag | `get_campaign_bible` and the Bible half of `get_constitution` need Bible sharing; `get_knowledge_graph` with `graph_type='foundations'` and the foundations half of `get_constitution` need World Foundations sharing. A flag that is off is reported as a normal not-shared result, not an error: `get_campaign_bible` and the foundations graph answer `{"shared": false, "message": "..."}`, while `get_constitution` carries the flag inside its own shared object instead |
-| Player: always allowed | `current_campaign`, `search_campaign`, `search_wiki`, `get_wiki_tree`, `get_wiki_page`, `get_entity`, `list_entities`, `get_entity_schema`, `get_field_options`, `get_tag_options` (`get_entity` and `list_entities` apply the dm-secret row filter; the other three carry no player-role gate today) |
+| Player: allowed only when the portal policy is `revealed` or `open` | `get_entity`, `list_entities`, `get_campaign_context`, `get_narrative_state`, `get_entity_catalog`, `get_knowledge_graph`, `get_constitution`, `get_campaign_bible` (`get_entity` and `list_entities` answer exactly what the player portal shows that player; the one exception is in the last player row) |
+| Player: gated again by a GM sharing flag | `get_campaign_bible` and the Bible half of `get_constitution` need Bible sharing; `get_knowledge_graph` with `graph_type='foundations'` and the foundations half of `get_constitution` need World Foundations sharing; the political, timeline and geography graphs of `get_knowledge_graph` and of `get_constitution`'s `graphStructures` each need the GM's portal sharing switch for that graph. A flag that is off is reported as a normal not-shared result, not an error: `get_campaign_bible` and every unshared graph of `get_knowledge_graph` answer `{"shared": false, "message": "..."}`, while `get_constitution` carries the flags inside its own shared object instead |
+| Player: always allowed | `current_campaign`, `search_campaign`, `search_wiki`, `get_wiki_tree`, `get_wiki_page`, `get_entity_schema`, `get_field_options`, `get_tag_options` (`get_field_options` answers a campaign-defined custom field only when the GM shows it to players; `get_entity` on the player's own character answers under every portal setting) |
 | GM only | every write tool, and everything in the first row |
 
 Player-visible results are additionally visibility-filtered in the query layer, so

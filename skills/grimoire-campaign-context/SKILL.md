@@ -47,7 +47,8 @@ context gets loaded deliberately instead of dumped all at once.
 
 1. `current_campaign` (free, instant). Returns the campaign, user, and **role** bound
    to this MCP session. Call it first, every time. Everything after this depends on
-   it, and the role decides how much of the next two steps you get back.
+   it, and the role decides how much of the next two steps you get back. A player
+   token also lists the player's own characters under `characters`.
    See "If you are connected as a player" below.
 2. `get_constitution` (Layer 1). Both roles. The world's non-negotiable truths:
    campaign summary, Campaign Bible summary, and the world foundations graph. This
@@ -112,39 +113,55 @@ player-role MCP connections"): `get_relationships`, `get_open_threads`,
 `get_thread_progressions`, `list_entity_graphs`, `get_entity_graph`. That is five
 tools. Do not retry these, and do not treat the error as a transient failure.
 
-**Gated by the campaign's player portal policy**: `get_campaign_context`,
-`get_narrative_state`, `get_entity_catalog`, `get_knowledge_graph`,
-`get_constitution`, `get_campaign_bible`. Under a `wiki-only` portal they refuse
-outright. Under `revealed` or `open` they work and return visibility-filtered
-results. The refusal message names the policy, so read it rather than guessing.
+**Gated by the campaign's player portal policy**: `get_entity`, `list_entities`,
+`get_campaign_context`, `get_narrative_state`, `get_entity_catalog`,
+`get_knowledge_graph`, `get_constitution`, `get_campaign_bible`. Under a
+`wiki-only` portal they refuse outright, with one exception: `get_entity` on one of
+the player's own characters answers under every portal setting (see below). Under
+`revealed` or `open` they work and return exactly what the player portal shows that
+player: no `dm_*` fields, and only the custom field values the GM shows players,
+under `shared_fields`. The refusal message names the policy, so read it rather than
+guessing.
 
 **Gated again by the GM's sharing flags**: `get_constitution` and
-`get_campaign_bible` for the Campaign Bible, and `get_constitution` and
-`get_knowledge_graph(graph_type='foundations')` for World Foundations. A flag that
-is off is not an error. `get_campaign_bible` and the foundations graph answer the
+`get_campaign_bible` for the Campaign Bible; `get_constitution` and
+`get_knowledge_graph(graph_type='foundations')` for World Foundations; and one
+portal sharing switch per graph for the political, timeline and geography graphs of
+`get_knowledge_graph` and of `get_constitution`'s `graphStructures`. A flag that is
+off is not an error. `get_campaign_bible` and every unshared graph answer the
 normal result `{"shared": false, "message": "..."}`, and `get_constitution` simply
-carries `shared.bible` or `shared.foundations` false with that part absent. Say so
+carries that flag false in its `shared` object with that part absent. Say so
 plainly and point the user at their GM; retrying changes nothing. With the Bible
 flag on you get only the blocks the GM marked `common-knowledge`; with the
 Foundations flag on you get the player-safe projection, GM Secret nodes and every
 edge touching them dropped, and never `aiGuidance`.
 
 **Always available to a player**: `current_campaign`, `search_campaign`,
-`search_wiki`, `get_wiki_tree`, `get_wiki_page`, `get_entity`, `list_entities`,
-`get_entity_schema`, `get_field_options`, `get_tag_options`. All of them return only
-what the player's visibility admits (`get_entity` and `list_entities` apply the
-dm-secret row filter and strip `dm_*` fields), and a page the player cannot reach
-answers "page not found" rather than "forbidden", so a not-found is not evidence
-that something is being hidden.
+`search_wiki`, `get_wiki_tree`, `get_wiki_page`, `get_entity_schema`,
+`get_field_options`, `get_tag_options`, and `get_entity` on the player's own
+characters. All of them return only what the player's visibility admits
+(`get_field_options` answers a campaign-defined custom field only when the GM shows
+it to players), and a page the player cannot reach answers "page not found" rather
+than "forbidden", so a not-found is not evidence that something is being hidden.
 
-So a player-role centering sequence is: `current_campaign`, then
-`get_constitution`, and read its `shared` object to learn what this table actually
-gives you. That one call already carries the campaignContext block, the player's
-campaign summary, and whichever of the Bible and the foundations the GM shared, so
-you rarely need `get_campaign_context` on its own. Then `get_wiki_tree`,
-`search_wiki`, and `search_campaign` for everything else; `get_narrative_state` and
-`get_entity_catalog` embed the same campaignContext block when the portal allows
-them, so one fetch is enough. When `shared` says a part is not shared, say so
+**The player's own characters.** When the GM assigned characters to this player,
+`current_campaign` lists them under `characters` (id, name, archived).
+`get_entity(category="player_characters", entity_id=<id>)` on one of them answers
+under every portal setting, wiki-only included, with `categoryData.my_character`
+true, `archived`, `key_items` (the full entries of the items the character carries)
+and `editable_custom_fields`. A key item's own `get_entity` still follows the portal
+policy, so read items through their character. You cannot change the character:
+every write tool is GM-only, and the player edits their sheet on the player
+portal's My Character page.
+
+So a player-role centering sequence is: `current_campaign` (and `get_entity` on
+any character it lists), then `get_constitution`, and read its `shared` object to
+learn what this table actually gives you. That one call already carries the
+campaignContext block, the player's campaign summary, and whichever of the Bible
+and the foundations the GM shared, so you rarely need `get_campaign_context` on its
+own. Then `get_wiki_tree`, `search_wiki`, and `search_campaign` for everything
+else; `get_narrative_state` and `get_entity_catalog` embed the same campaignContext
+block when the portal allows them, so one fetch is enough. When `shared` says a part is not shared, say so
 plainly if the user asks for world truths you cannot reach, and point them at their
 GM. Every write tool is GM-only as well.
 
@@ -207,7 +224,9 @@ data into a generic blob where nothing can query it. Do not do that.
   closed enum. A select-type default field also accepts a brand-new free-text value,
   and the new value becomes a campaign option. Do not avoid the right word just
   because it is not listed.
-- `customFields`: the GM's own defined fields for this campaign.
+- `customFields`: the GM's own defined fields for this campaign, each with
+  `isDMOnly` (GM Secret) and `showToPlayers`. Only a `showToPlayers` field's value
+  reaches players; every other custom field value stays with the GM.
 
 Any key in `custom_fields` that is neither a default field nor a defined custom
 field is rejected outright. Relation fields take arrays of entity UUIDs and sync
