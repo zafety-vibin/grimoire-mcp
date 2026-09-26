@@ -118,8 +118,9 @@ tools. Do not retry these, and do not treat the error as a transient failure.
 `get_knowledge_graph`, `get_constitution`, `get_campaign_bible`. Under a
 `wiki-only` portal they refuse outright, with one exception: `get_entity` on one of
 the player's own characters answers under every portal setting (see below). Under
-`revealed` or `open` they work and return exactly what the player portal shows that
-player: no `dm_*` fields, and only the custom field values the GM shows players,
+`revealed` or `open` they work: `get_entity` and `list_entities` return exactly what
+the player portal shows that player, and the rest return visibility-filtered data
+(World Foundations reaches a player connection only, never a portal page): no `dm_*` fields, and only the custom field values the GM shows players,
 under `shared_fields`. The refusal message names the policy, so read it rather than
 guessing.
 
