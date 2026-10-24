@@ -72,7 +72,9 @@ context gets loaded deliberately instead of dumped all at once.
 **Then, if the question touches the present tense of the story:**
 
 4. `get_narrative_state` (Layer 1.5). Recent sessions with summaries and key events,
-   plus each session's dmConsequences and dmBehindScenes on GM connections, open
+   in play order, newest first, whatever their canonical status (archived recaps are
+   skipped), plus each session's canonicalStatus, dmConsequences and dmBehindScenes
+   on GM connections, open
    threads split into major and minor, canonical facts, active arcs, and recent
    observations. Call it for anything about "now": what the party is doing, what
    just happened, how an NPC would react today, prep, recaps, consequences. Skip it
@@ -224,7 +226,8 @@ data into a generic blob where nothing can query it. Do not do that.
 - `selectOptions`: suggested values for select-type fields. These are hints, not a
   closed enum. A select-type default field also accepts a brand-new free-text value,
   and the new value becomes a campaign option. Do not avoid the right word just
-  because it is not listed.
+  because it is not listed. A default field that lists `values` (the quest and
+  session prep workflow status) is the exception: it accepts only those values.
 - `customFields`: the GM's own defined fields for this campaign, each with
   `isDMOnly` (GM Secret) and `showToPlayers`. Only a `showToPlayers` field's value
   reaches players; every other custom field value stays with the GM.
