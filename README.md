@@ -1,6 +1,6 @@
-# Grimoire MCP
+# Grimoire MCP: D&D and TTRPG Campaign Manager for Claude and ChatGPT
 
-> Your campaign as a live database your AI reads and writes, not markdown files you maintain.
+> The official hosted MCP server for Grimoire for Gamemasters. Your D&D campaign as a live, typed database your AI reads and writes, not markdown files you maintain.
 
 | | |
 |---|---|
@@ -13,15 +13,17 @@
 
 ## What is Grimoire?
 
-Grimoire is a campaign manager for D&D and tabletop RPG gamemasters that gives your AI live campaign state instead of flat markdown files to keep in sync. A campaign in Grimoire is a typed database, not a folder of notes: NPCs, factions, locations, quests, sessions, and lore, connected by relationships and knowledge graphs, with a collaborative wiki whose pages link to those records. The hosted MCP server lets any connected client read and write that database directly, so the AI answers from your current canon and stays consistent as the campaign changes between sessions.
+Grimoire for Gamemasters is a campaign manager for Dungeons and Dragons and other tabletop RPGs, built for the Dungeon Master or GM who runs the world. This repository documents its official MCP server, which lets Claude, ChatGPT, Cursor, or any MCP client read and write your campaign directly. A campaign in Grimoire is a typed database and knowledge graph, not a folder of notes: NPCs, factions, locations, quests, session recaps, and lore, connected by relationships, with a collaborative wiki whose pages link to those records. The AI answers from your current canon and stays consistent as the campaign changes between sessions.
 
 The difference from a folder of campaign files is what the AI gets back. A file search returns prose that may be stale. Grimoire returns typed state: a faction's current leader, the open plot threads and how many sessions they have been hanging, the wiki pages that mention an NPC, the facts the table has marked canon. Writes go back into the same structure, so nothing you file from a chat drifts out of date.
+
+It works for D&D 5e, Pathfinder 2e, Call of Cthulhu, Shadowdark, homebrew settings, and any other system: the records are the world, not a rules engine.
 
 ## How to use Grimoire?
 
 Three clicks, nothing to install:
 
-1. **Add the connector.** In Claude.ai or ChatGPT (or any MCP client that supports custom connectors), open Settings, then Connectors, then Add custom connector, and paste `https://api.ttrpg.bot/mcp`.
+1. **Add the connector.** In Claude.ai (the free plan includes one custom connector), ChatGPT (Plus or Pro with Developer Mode), or any MCP client that supports custom connectors, open Settings, then Connectors, then Add custom connector, and paste `https://api.ttrpg.bot/mcp`.
 2. **Sign in and pick a campaign.** Your client opens the Grimoire consent screen. Sign in with the account that owns the campaign, pick which campaign the AI should see, click Approve. Access is scoped to that one campaign, enforced server-side.
 3. **Ask it something about your world.** *"Who knows about the cult?" "What was the queen's reaction in session 4?" "What changed since session 12?"* The client reads live and answers from your data.
 
@@ -45,11 +47,12 @@ Auth is OAuth 2.1 with PKCE; the client opens a browser sign-in on first connect
 ## Key features of Grimoire
 
 - **Live typed state, not flat files.** 52 tools (21 read, 31 write) over a typed campaign database with 14 entity schemas. One narrative-state call returns recent sessions, open plot threads, active arcs, and canon facts.
-- **Read and write, so state stays current.** Create and update entities, log thread progressions, and write wiki pages, blocks, and tables from the conversation, so canon updates as you prep instead of going stale in a file.
+- **Read and write, so state stays current.** Create and update NPCs, factions, locations, and quests, log thread progressions, and write wiki pages, blocks, and tables from the conversation, so canon updates as you prep instead of going stale in a file.
 - **The wiki is part of the world.** Full-text wiki search, pages with breadcrumbs and children, tables that round-trip as markdown grids, and entity and page links that resolve to real records instead of string matches.
 - **Knowledge-graph queries** across political, geographic, and timeline projections, with GM visibility filtering applied server-side.
 - **GM secrets enforced server-side** through three visibility tiers (common knowledge, player knowledge, GM secret), so what the AI can surface respects what players are allowed to see.
-- **Hosted, one OAuth click, no token markup.** Remote streamable HTTP with OAuth 2.1; nothing to install or self-host. The free tier includes full MCP access, and Grimoire never charges for AI tokens.
+- **Player connections too.** When the GM turns on player AI for a campaign, a player can connect their own AI and read exactly what the player portal shows them, nothing the GM has kept secret.
+- **Hosted, one OAuth click, no token markup.** Remote streamable HTTP with OAuth 2.1; nothing to install or self-host. The free tier includes MCP access, and Grimoire never charges for AI tokens.
 
 ## Use cases of Grimoire
 
@@ -99,11 +102,15 @@ OAuth scopes are campaign-scoped. Granting access to one campaign does not grant
 
 ## Pricing
 
-End-to-end free to try. Grimoire's free tier includes full MCP access and pairs with the free tiers on Claude.ai and ChatGPT, both of which support MCP connectors with no card required. Pro unlocks unlimited campaigns and entities, custom fields on every category, and more storage.
+Free to try end to end. Grimoire's free tier includes MCP access for one campaign with up to 100 entities, and it pairs with Claude's free plan, which supports one custom connector with no card required. ChatGPT custom connectors need Plus or Pro with Developer Mode. Pro unlocks unlimited campaigns and entities, custom fields on every category, and more storage. Grimoire never charges for AI tokens: you bring your own client.
 
 Pricing: https://www.ttrpg.bot/#pricing
 
 ## FAQ from Grimoire
+
+### Is there an MCP server that lets Claude or ChatGPT read and edit my D&D campaign?
+
+Yes. Grimoire's hosted MCP server at `https://api.ttrpg.bot/mcp` gives Claude, ChatGPT, Cursor, and other MCP clients read and write access to a Grimoire campaign: NPCs, factions, locations, quests, session recaps, lore, open plot threads, and the campaign wiki. You connect with one OAuth click and choose which campaign the AI can see.
 
 ### Where is the source code for Grimoire?
 
@@ -115,11 +122,15 @@ Yes. Use the streamable HTTP block above, or skip config entirely: clients with 
 
 ### Is it free?
 
-Yes, end to end. Grimoire's free tier covers full MCP access, and the free tiers of Claude.ai and ChatGPT each support a custom connector with no card required.
+Yes, to try. Grimoire's free tier includes MCP access for one campaign with up to 100 entities, and Claude's free plan supports one custom connector with no card required. ChatGPT needs Plus or Pro with Developer Mode for custom connectors.
 
 ### Which clients work?
 
-Claude (web and desktop), ChatGPT (plans with connector support), Cursor, and any MCP-compatible client that can talk to remote streamable HTTP servers.
+Claude (web and desktop), ChatGPT (Plus or Pro with Developer Mode), Cursor, and any MCP-compatible client that can talk to remote streamable HTTP servers.
+
+### Does it work for Pathfinder, Call of Cthulhu, or my homebrew system?
+
+Yes. Grimoire is system-agnostic. Campaigns can be set up for D&D 5e, Pathfinder 2e, Call of Cthulhu, Shadowdark, and many other systems or a homebrew setting, and the genre changes the labels and defaults, not what the AI can do. The tools read and write the world (people, places, factions, history, threads), not character-sheet rules.
 
 ### Can it read and write my wiki?
 
@@ -128,6 +139,10 @@ Yes. `search_wiki` finds pages and blocks by text, `get_wiki_page` returns a pag
 ### How is this different from keeping campaign notes in markdown files?
 
 Files hold prose; the AI has to guess which file is current and re-read it every session. Grimoire holds typed state: records with fields and relationships, threads with ages, facts marked canon, pages linked to records. The AI queries what is true now and writes changes back into the same structure, so nothing drifts between sessions.
+
+### How does it compare to World Anvil, Obsidian, or Notion for worldbuilding?
+
+Those tools store pages, and an AI connected to them reads pages. Grimoire stores typed records and the relationships between them, so an AI can traverse the campaign: from a city to the factions with a stake in it, to the NPCs who lead them, to the open threads they touch, with GM secrets filtered on the server. If you already have notes elsewhere, the AI can read them in a chat and file them into Grimoire as typed entities.
 
 ### Does connecting share my campaign with an AI vendor?
 
@@ -138,6 +153,7 @@ You bring your own client. Grimoire exposes the one campaign you approve to that
 - Product: https://www.ttrpg.bot
 - MCP overview and connect flow: https://www.ttrpg.bot/mcp
 - Full setup guide: https://www.ttrpg.bot/docs/mcp/
+- Campaign knowledge graph: https://www.ttrpg.bot/campaign-knowledge-graph/
 - Campaign wiki: https://www.ttrpg.bot/dnd-campaign-wiki/
 - Changelog: https://www.ttrpg.bot/changelog
 - Support: zmanlevelup@gmail.com

@@ -137,8 +137,8 @@ interleave. `batch_reorder_wiki_blocks` is for when you actually want a differen
 order, passing every block id on the page.
 
 Block visibility: `inherit` (default; not allowed on a root page),
-`common-knowledge`, `dm-secret`, `player-knowledge` (on wiki content a GM tracking
-marker today, see the Visibility section of SKILL.md), `system` (rules and meta
+`common-knowledge`, `dm-secret`, `player-knowledge` (every joined player reads it,
+see the Visibility section of SKILL.md), `system` (rules and meta
 notes; players read it like common-knowledge). All wiki tools work in the campaign
 wiki space only; a page the connected role cannot reach answers "page not found"
 everywhere.

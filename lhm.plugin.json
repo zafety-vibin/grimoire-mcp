@@ -3,26 +3,31 @@
   "authorUrl": "https://github.com/zafety-vibin",
   "category": "gaming-entertainment",
   "cloudEndpoint": "https://api.ttrpg.bot/mcp",
-  "description": "Campaign manager for D&D and TTRPG gamemasters with a hosted MCP server. Your AI reads and writes a live typed campaign database instead of flat markdown files: 14 entity schemas, knowledge graphs, open threads, and a collaborative wiki with full-text search, with GM secrets enforced server side. One OAuth click connects Claude, ChatGPT, or Cursor; the free tier includes full MCP access.",
+  "description": "D&D campaign manager for Dungeon Masters and TTRPG gamemasters, with an official hosted MCP server. Claude, ChatGPT, or Cursor reads and writes a live typed campaign database and knowledge graph instead of flat markdown files: NPCs, factions, locations, quests, session recaps, open plot threads, and a collaborative wiki with full-text search, with GM secrets enforced server side. One OAuth click connects; the free tier includes MCP access. Works for D&D 5e, Pathfinder 2e, Call of Cthulhu, and homebrew worlds.",
   "homepage": "https://www.ttrpg.bot/mcp",
   "icon": "https://api.ttrpg.bot/favicon.svg",
   "identifier": "zafety-vibin-grimoire-mcp",
-  "name": "Grimoire",
+  "name": "Grimoire for Gamemasters",
   "tags": [
-    "ttrpg",
     "dnd",
+    "dungeons-and-dragons",
+    "dungeon-master",
+    "ttrpg",
+    "tabletop-rpg",
     "campaign-manager",
     "worldbuilding",
     "knowledge-graph",
-    "tabletop",
+    "pathfinder",
     "games"
   ],
-  "version": "1.5.3",
+  "version": "1.6.0",
   "tools": [
     {
       "name": "current_campaign",
       "description": "Returns the campaign, user, and role bound to the current MCP session.\n\nPLAYER ROLE: also returns characters, the player characters the GM assigned to this player (id, name, archived). Read one with get_entity(category=\"player_characters\", entity_id=<id>); it answers under every portal setting, even when the portal is wiki-only. An archived character is a read-only record.",
       "inputSchema": {
+        "properties": {},
+        "required": [],
         "type": "object"
       }
     },
@@ -30,6 +35,27 @@
       "name": "search_campaign",
       "description": "Search across all campaign entities using full-text search.\n\nSEARCH TIPS:\n- Use specific names: a character or place's exact name finds that entity directly\n- Use keywords: a recurring concept finds every entity that mentions it\n- Searches every free-text field of an entity: name, description, and the category's own text fields (appearance, motivation, notable features, backstory, session summary, rewards, and so on)\n- Custom field values (custom_fields) and the GM-only dm_* fields are searched on GM connections only; player connections never match on those and never receive dm_* fields from get_entity\n\nCATEGORY FILTERING:\nNarrow search to specific categories for faster results.\n\nRETURNS:\nArray of results with: id, category, name, description (truncated), status (GM connections only), tags, relevance score\nThe description in a result is the entity description, so a hit on a GM-only field or a custom field may not show the matched text; call get_entity to read it.\n\nVISIBILITY: A player connection searches exactly what the player portal's search does: only entities the portal shows that player (under a wiki-only portal, none), matching only the text the portal shows (never GM-only fields, custom fields, or withheld fields such as an NPC's motivation).",
       "inputSchema": {
+        "properties": {
+          "categories": {
+            "description": "Comma-separated categories: npcs, locations, factions, quests, items, lore_entries, session_recaps, creatures, player_characters, world_rules, planar_forces, custom_mechanics, session_preps, vehicles. Empty = all.",
+            "type": "string"
+          },
+          "include_archived": {
+            "description": "Include archived entities (default: false)",
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Max results (default: 20, max: 50)",
+            "type": "number"
+          },
+          "query": {
+            "description": "Search query - names, keywords, or phrases",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
         "type": "object"
       }
     },
@@ -37,6 +63,20 @@
       "name": "get_entity",
       "description": "Retrieve full details for a specific entity. This is Layer 5 (On-Demand).\n\nUSE THIS AFTER discovering entities via get_entity_catalog, search_campaign, or following relationship references.\n\nRETURNS: Core fields (id, name, description, status, tags), customFields, categoryData, timestamps.\n\nVISIBILITY (GM): everything, including the GM-only dm_* fields and every custom field.\n\nPLAYER ROLE: the answer is the player portal's own codex entry. An entity the portal does not show that player (GM Secret, not yet met under a revealed portal, hidden from the portal) answers \"entity not found\", the same as one that does not exist. A visible entity returns id, category, name, description, tags and categoryData holding only the fields the portal shows, with related names resolved behind the same rules: shared_fields carries the custom fields the GM chose to show players, a character's key_items and an item's held_by are names, and the NPC owner of an item or a vehicle is never included (a vehicle's owner_name names only a player character or faction owner). Status, the visibility level, customFields, timestamps and withheld fields (such as an NPC's motivation) are never included. A campaign whose player portal is wiki-only refuses this tool, except for the player's own characters: a player_characters id from current_campaign's characters list always answers, under every portal setting and whatever the character's own visibility, with categoryData.my_character true, archived, key_items (the full entries of the items the character carries) and editable_custom_fields. Player connections cannot edit anything; a player edits their own character on the player portal's My Character page.",
       "inputSchema": {
+        "properties": {
+          "category": {
+            "description": "Entity category: npcs, locations, factions, quests, items, lore_entries, session_recaps, creatures, player_characters, world_rules, planar_forces, custom_mechanics, session_preps, vehicles",
+            "type": "string"
+          },
+          "entity_id": {
+            "description": "The UUID of the entity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "category"
+        ],
         "type": "object"
       }
     },
@@ -44,6 +84,31 @@
       "name": "list_entities",
       "description": "List the entities of one category, with pagination. For the whole-campaign overview (every active entity's id and name by category, with per-type counts), call get_entity_catalog first; use list_entities to page through one category or drill into one kind.\n\nRETURNS: entities array with id, name, kind, description (cut at a word boundary near 150 characters, ending in ... when cut), status and tags; totalCount (the entities matching every filter, which offset pages through); categoryTotal (the whole category under the same status rule, ignoring kind); kindCounts (see KIND).\n\nKIND: each row carries kind, its category's classifying field: lore_entries category, locations location_type, factions faction_type, items item_type, creatures creature_type, world_rules category, planar_forces entity_type, custom_mechanics mechanic_type, vehicles vehicle_type, quests status and session_preps status (for those two, kind is the quest's or prep's own workflow status, not the lifecycle status filter below). npcs, player_characters and session_recaps have no kind, and passing kind for them is an error. Pass kind to list one kind only: it matches the whole value, ignoring case and surrounding spaces, and campaign-specific values work too. kindCounts always counts the whole category by kind, even while kind filters the page, so nothing is missed; entities with no kind are counted in categoryTotal but not in kindCounts.\n\nORDER: by name, except session_recaps, which come in play order, newest first: highest session number first, then latest session date, then most recently created, with unnumbered sessions after numbered ones.\n\nSTATUS FILTERING: the lifecycle status: active (default), draft, hidden, archived\n\nPAGINATION: Use offset + limit to page through results.\n\nPLAYER ROLE: lists exactly the entities the player portal shows that player in this category; the status filter is ignored, status is not returned, and totalCount, categoryTotal and kindCounts count the same set, so an entity the portal does not show is never listed or counted. A campaign whose player portal is wiki-only refuses this tool.",
       "inputSchema": {
+        "properties": {
+          "category": {
+            "description": "Category to list: npcs, locations, factions, quests, items, lore_entries, session_recaps, creatures, player_characters, world_rules, planar_forces, custom_mechanics, session_preps, vehicles",
+            "type": "string"
+          },
+          "kind": {
+            "description": "List only this kind, the category's classifying value (for example a location's location_type, a lore entry's category, or a quest's workflow status). Matches the whole value, ignoring case and surrounding spaces; campaign-specific values work. Not available for npcs, player_characters or session_recaps. Read kindCounts from an unfiltered call to see every kind.",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Max results per page (default: 50, max: 100)",
+            "type": "number"
+          },
+          "offset": {
+            "description": "Skip first N results for pagination (default: 0)",
+            "type": "number"
+          },
+          "status": {
+            "description": "Filter by lifecycle status: active (default), draft, hidden, archived",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category"
+        ],
         "type": "object"
       }
     },
@@ -51,6 +116,20 @@
       "name": "get_field_options",
       "description": "Get available options for customizable select fields.\n\nUse before creating/updating entities to see valid values for fields like race, class, creature_type, item_type, rarity, faction_type, location_type, etc.\n\nRETURNS: Array of {value, label, is_default} for each option.\n\nVISIBILITY: A player token gets the options of a campaign-defined custom select field only when the GM shows that field to players (showToPlayers in get_entity_schema); every other custom field's options, GM Secret or not, are refused as GM-only. Built-in select fields (race, class, alignment and the like) answer every role with the campaign's whole vocabulary: their values are shared with players by design.",
       "inputSchema": {
+        "properties": {
+          "entity_type": {
+            "description": "Entity type: npc, pc, creature, item, faction, location, lore, mechanic, world-rule, deity, vehicle",
+            "type": "string"
+          },
+          "field_name": {
+            "description": "Field name: race, class, creature_type, item_type, rarity, faction_type, power_level, location_type, category, historical_accuracy, mechanic_type, complexity, vehicle_type, function, entity_type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_type",
+          "field_name"
+        ],
         "type": "object"
       }
     },
@@ -58,6 +137,15 @@
       "name": "get_entity_schema",
       "description": "Describe the writable shape of a category before creating or updating entities.\n\nCALL THIS FIRST when creating or updating an entity so you target real DEFAULT FIELDS instead of dumping everything into custom_fields.\n\nRETURNS:\n- globalFields: name, description, status, player_knowledge, tags (set at the top level of create_entity/update_entity)\n- defaultFields: the category's native fields (key, type, isRelation, isDMOnly, selectFieldName, shape). Pass these inside custom_fields; they are written to real columns. json-type fields carry a shape string describing their element shape. A field with values (the quest and session prep status) accepts only those values: it is the category's workflow status, separate from the top-level lifecycle status.\n- selectOptions: for select-type default fields, the SUGGESTED option values (same source as get_field_options). These are hints, not a closed enum: select-type default fields also accept brand-new free-text values, and a create or update adds the new value to the campaign's options for that field, the same as typing it into the app's picker (class names count too; a value matching an existing option, ignoring case and spacing, adds nothing). GM-defined custom select fields stay strict. Don't avoid a value just because it isn't listed.\n- customFields: this campaign's GM-defined custom fields (key, label, type, required, isDMOnly, showToPlayers). Only these extra keys are accepted in custom_fields beyond the default fields. An isDMOnly custom field behaves exactly like a dm_* default field: only the GM can write it. A showToPlayers custom field's value reaches players (the player portal and player connections); every other custom field value stays with the GM.\n\nIMPORTANT: Any key in custom_fields that is neither a default field nor a defined custom field is rejected. Relation fields (isRelation=true) take arrays of entity UUIDs and sync junction tables.",
       "inputSchema": {
+        "properties": {
+          "category": {
+            "description": "Entity category: npcs, locations, factions, quests, items, lore_entries, session_recaps, creatures, player_characters, world_rules, planar_forces, custom_mechanics, session_preps, vehicles",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category"
+        ],
         "type": "object"
       }
     },
@@ -65,6 +153,8 @@
       "name": "get_tag_options",
       "description": "Get available tags for entities in this campaign.\n\nIMPORTANT: Always call this BEFORE creating or updating entities to use consistent tags.\n\nReturns standard_tags (core tags) and custom_tags (already used in campaign).\nBEST PRACTICE: Prefer standard_tags for consistency.\n\nRETURNS: {standard_tags: [{value, label, color}], custom_tags: [string], all_tags: [string]}\n\nPLAYER ROLE: custom_tags are the tags of the entries the player portal shows that player; a campaign whose player portal is wiki-only refuses the call.",
       "inputSchema": {
+        "properties": {},
+        "required": [],
         "type": "object"
       }
     },
@@ -72,6 +162,44 @@
       "name": "create_entity",
       "description": "Create a new entity in any of the 14 campaign categories.\n\nCALL get_entity_schema(category) FIRST to see the exact default fields, their types, select options, and any campaign-defined custom fields.\n\nCOMMON FIELDS (all categories, set at top level):\n- name (required): Entity name\n- description: Narrative description\n- status: active|draft|hidden|archived (default: active)\n- player_knowledge: common-knowledge|dm-secret|player-knowledge\n- tags: Array of tag strings - USE STANDARD TAGS: political, personal, economic, religious, magical, historical, secret, prophetic, combat, social, environmental, technological. Call get_tag_options first.\n- custom_fields: JSON object for the category's DEFAULT fields plus any campaign-defined custom fields. A campaign-defined field the GM marked GM Secret (isDMOnly in get_entity_schema) is written here like any other, and behaves like a dm_* field afterwards: get_entity strips it from player reads.\n\nDEFAULT FIELDS ARE REAL COLUMNS: keys you pass in custom_fields that match a category's default field (e.g. locations.location_type, locations.population, npcs.faction_id) are written to their native columns, not the generic custom_fields blob. Relation arrays (e.g. allied_faction_ids, related_npc_ids) take entity UUIDs and sync junction tables. Only keys that are neither default fields nor defined custom fields are rejected with the list of valid fields.\n\nWORKFLOW STATUS: for quests (not_started|in_progress|completed|failed) and session_preps (draft|ready|completed|cancelled), custom_fields.status is the category's own workflow status; the top-level status is the lifecycle (active|draft|hidden|archived) in every category, and custom_fields.status is refused in any other category.\n\nCATEGORY-SPECIFIC DEFAULT FIELDS (examples; see get_entity_schema for the full list):\n- npcs: race, class [{name,level}], alignment, personality_traits, motivation, faction_id, location_ids | GM only: dm_secrets\n- locations: location_type, parent_location_id, population, cultural_characteristics, notable_npc_ids | GM only: dm_secrets\n- factions: faction_type, power_level, goals, leader_id, allied_faction_ids, rival_faction_ids | GM only: dm_true_agenda\n- quests: status (not_started|in_progress|completed|failed), quest_giver_id, rewards, objectives | GM only: dm_true_objective\n- items: item_type, rarity, properties, owner_npc_id, owner_pc_id | GM only: dm_secret_properties\n- session_recaps: session_number, summary, key_events [{description, important, is_canonical_fact}] (id/order server-assigned), canonical_status (canon|non-canon|retconned|hypothetical only, default canon; never notes), pcs_present_ids, factions_involved_ids | GM only: dm_consequences, dm_behind_scenes\n- lore_entries: category, era_period, in_game_date_start, historical_accuracy | GM only: dm_historical_impact\n\nCONTENT FIDELITY:\n- Use the user's EXACT WORDS for names, descriptions, and details\n- DO NOT fill in fields the user didn't specify\n- ASK before adding creative content the user didn't request\n- Only populate fields the user explicitly provides",
       "inputSchema": {
+        "properties": {
+          "category": {
+            "description": "The category for the entity",
+            "type": "string"
+          },
+          "custom_fields": {
+            "description": "Object holding the category's DEFAULT fields plus any campaign-defined custom fields. Default-field keys (e.g. location_type, population) write to native columns; relation arrays (e.g. allied_faction_ids) take entity UUIDs and sync junction tables; other keys must match a defined custom field or the call is rejected. Call get_entity_schema(category) first to see the keys for this category. Select-type default fields accept free-text values beyond the suggested options.",
+            "properties": {},
+            "type": "object"
+          },
+          "description": {
+            "description": "Narrative description for the entity",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name for the new entity",
+            "type": "string"
+          },
+          "player_knowledge": {
+            "description": "Visibility: common-knowledge, dm-secret, player-knowledge",
+            "type": "string"
+          },
+          "status": {
+            "description": "Entity status: active, draft, hidden, archived (default: active)",
+            "type": "string"
+          },
+          "tags": {
+            "description": "Array of tag strings. Use standard tags: political, personal, economic, religious, magical, historical, secret, prophetic, combat, social, environmental, technological.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "category",
+          "name"
+        ],
         "type": "object"
       }
     },
@@ -79,6 +207,52 @@
       "name": "update_entity",
       "description": "Update an existing entity's fields.\n\nCALL get_entity_schema(category) to see the writable default fields for the category.\n\nPARTIAL UPDATES: Only provide fields you want to change. Default-field keys inside custom_fields are written to their native columns (e.g. location_type, population, faction_id). Relation arrays (e.g. allied_faction_ids) replace the entity's junction-table links for that relation.\n\nWORKFLOW STATUS: for quests (not_started|in_progress|completed|failed) and session_preps (draft|ready|completed|cancelled), custom_fields.status is the category's own workflow status; the top-level status is the lifecycle (active|draft|hidden|archived) in every category, and custom_fields.status is refused in any other category.\n\nCUSTOM_FIELDS BEHAVIOR (three rules, one object, see get_entity_schema for which key is which):\n- DEFAULT fields write to native columns and are partial: omit a key to leave it unchanged. Passing null CLEARS a default field get_entity_schema marks clearable (level, population, total_member_count, session_number, session_date, in_game_date_start/in_game_date_end on session recaps, planned_date); on any other default field null is REJECTED (it does not clear the column), so set a new value to change it.\n- TRUE CUSTOM fields (campaign-defined) are MERGED into the existing blob, so a partial update keeps unrelated custom fields. Pass null on a custom key to delete just that key.\n- RELATION arrays REPLACE that relation's junction links; pass [] to clear them.\nUnknown keys are rejected with the list of valid fields.\n\nTAGS: Use standard tags (political, personal, combat, social, etc.) - call get_tag_options to see available options.\n\nRETURNS: Updated entity with all current fields.",
       "inputSchema": {
+        "properties": {
+          "category": {
+            "description": "Entity category",
+            "type": "string"
+          },
+          "custom_fields": {
+            "description": "Object whose keys are written by THREE different rules (call get_entity_schema to see which key is which): (1) DEFAULT-FIELD keys (e.g. location_type, population, faction_id) write to native columns and are partial: omit a key to leave it unchanged. Passing null clears a default field get_entity_schema marks clearable (e.g. level, population, session_date, planned_date); on any other default field null is rejected (it cannot clear the column this way). (2) CAMPAIGN-DEFINED CUSTOM keys are MERGED into the existing custom_fields blob: unrelated custom fields are preserved; pass null on a custom key to delete just that key. (3) RELATION arrays (e.g. allied_faction_ids) REPLACE that relation's junction links; pass [] to clear them.",
+            "properties": {},
+            "type": "object"
+          },
+          "description": {
+            "description": "New description (omit to keep current)",
+            "type": "string"
+          },
+          "entity_id": {
+            "description": "UUID of the entity to update",
+            "type": "string"
+          },
+          "name": {
+            "description": "New name (omit to keep current)",
+            "type": "string"
+          },
+          "player_knowledge": {
+            "description": "New visibility: common-knowledge, dm-secret, player-knowledge",
+            "type": "string"
+          },
+          "portal_hidden": {
+            "description": "Hide this entity from player portal browsing regardless of visibility tier (true), or make it eligible again (false). Omit to keep current. Not applicable to session_preps.",
+            "type": "boolean"
+          },
+          "status": {
+            "description": "New status: active, draft, hidden, archived",
+            "type": "string"
+          },
+          "tags": {
+            "description": "Array of tag strings. When provided, REPLACES the existing tag set (pass the full desired list; omit the field to leave tags unchanged). Use standard tags: political, personal, economic, religious, magical, historical, secret, prophetic, combat, social, environmental, technological.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "entity_id",
+          "category"
+        ],
         "type": "object"
       }
     },
@@ -86,6 +260,24 @@
       "name": "delete_entity",
       "description": "Permanently delete an entity. Cannot be undone. Removes its relationships, graph memberships, annotations and custom edges, clears it from observations and thread links, exactly like deleting it in the app. A session recap that resolved threads is refused (they would reopen) unless reopen_threads is true.",
       "inputSchema": {
+        "properties": {
+          "category": {
+            "description": "Entity category",
+            "type": "string"
+          },
+          "entity_id": {
+            "description": "UUID of the entity to delete permanently",
+            "type": "string"
+          },
+          "reopen_threads": {
+            "description": "Session recaps only: set true after the user confirms that the threads resolved in this session reopen",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "entity_id",
+          "category"
+        ],
         "type": "object"
       }
     },
@@ -93,6 +285,23 @@
       "name": "batch_create_entities",
       "description": "Create multiple entities at once (max 10 per call). All must be same category.\n\nCALL get_entity_schema(category) FIRST so each entity targets the category's real default fields. Default-field keys inside custom_fields land in native columns; relation arrays sync junction tables; unknown keys fail that entity with the list of valid fields.\n\nWORKFLOW STATUS: for quests and session_preps, an entity's custom_fields.status is that category's own workflow status (quests not_started|in_progress|completed|failed, session_preps draft|ready|completed|cancelled); a bad value fails only that entity, and in any other category custom_fields.status is refused.\n\nUSE CASES: Populating factions with NPCs, creating related locations, bulk session prep.\n\nTAGS: Each entity can have tags. Use standard tags: political, personal, economic, religious, magical, historical, secret, prophetic, combat, social, environmental, technological.\n\nPARTIAL-SUCCESS SEMANTICS: Entities are inserted sequentially, NOT inside a single\ntransaction. If entity #3 fails its INSERT, entities #1 and #2 are already\ncommitted and remain in the database. Validation errors before INSERT (e.g.,\nmissing name) also fail per-entity. Inspect the 'failed' array to see what\ndidn't make it. To roll back partial creation, delete via delete_entity using\nthe IDs from 'created'.\n\nRETURNS: {created: [...], failed: [...], total, success} - 'failed' is always\npresent (as [] when everything succeeded) so callers don't need null-checks.",
       "inputSchema": {
+        "properties": {
+          "category": {
+            "description": "Category for all entities in this batch",
+            "type": "string"
+          },
+          "entities": {
+            "description": "Array of entity objects: [{name, description, status?, player_knowledge?, tags?, custom_fields?}, ...]",
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "category",
+          "entities"
+        ],
         "type": "object"
       }
     },
@@ -100,6 +309,50 @@
       "name": "create_foundation_node",
       "description": "Create a Foundation Node: a discrete, named world concept in the campaign's constitutional Foundations graph (Layer 1, always loaded).\n\nFoundation nodes are world-defining concepts (e.g. a cataclysm, a hidden power, a cosmological law), NOT database entities like NPCs or locations. Use create_entity for those.\n\nGroup nodes with 'category' (the campaign's foundation sections, e.g. for post-apocalyptic: \"The Collapse\", \"Technology & Salvage\", \"Hazards & Radiation\", \"Factions of the Wastes\", \"Fundamental Laws\").\n\nSet 'importance' 0-5 (5 = most defining). Use 'ai_guidance' for instructions on how the AI should treat this concept.\n\nWorld Foundations nodes are GM Secret by default. Set visibility to common-knowledge or player-knowledge only for nodes players may know. Leave secrets and the campaign spine at the default.",
       "inputSchema": {
+        "properties": {
+          "ai_guidance": {
+            "description": "Optional GM directive for how the AI should use this concept",
+            "type": "string"
+          },
+          "category": {
+            "description": "Foundation section this node belongs to (see the campaign's foundation sections)",
+            "type": "string"
+          },
+          "color": {
+            "description": "Optional color",
+            "type": "string"
+          },
+          "description": {
+            "description": "What this concept is",
+            "type": "string"
+          },
+          "icon": {
+            "description": "Optional icon key",
+            "type": "string"
+          },
+          "importance": {
+            "description": "0-5; how defining this concept is (default 3)",
+            "type": "number"
+          },
+          "name": {
+            "description": "Concept name, e.g. 'The Shattering'",
+            "type": "string"
+          },
+          "tags": {
+            "description": "Cross-cutting tags",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "visibility": {
+            "description": "common-knowledge | player-knowledge | dm-secret (default dm-secret)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
         "type": "object"
       }
     },
@@ -107,6 +360,54 @@
       "name": "update_foundation_node",
       "description": "Update a Foundation Node. Only the fields you provide are changed; omit a field to leave it untouched.",
       "inputSchema": {
+        "properties": {
+          "ai_guidance": {
+            "description": "GM directive for the AI",
+            "type": "string"
+          },
+          "category": {
+            "description": "New foundation section",
+            "type": "string"
+          },
+          "color": {
+            "description": "Color",
+            "type": "string"
+          },
+          "description": {
+            "description": "New description",
+            "type": "string"
+          },
+          "icon": {
+            "description": "Icon key",
+            "type": "string"
+          },
+          "importance": {
+            "description": "0-5",
+            "type": "number"
+          },
+          "name": {
+            "description": "New name",
+            "type": "string"
+          },
+          "node_id": {
+            "description": "UUID of the foundation node to update",
+            "type": "string"
+          },
+          "tags": {
+            "description": "Replacement tag list",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "visibility": {
+            "description": "common-knowledge | player-knowledge | dm-secret",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_id"
+        ],
         "type": "object"
       }
     },
@@ -114,6 +415,15 @@
       "name": "delete_foundation_node",
       "description": "Delete a Foundation Node and any foundation-graph edges referencing it.",
       "inputSchema": {
+        "properties": {
+          "node_id": {
+            "description": "UUID of the foundation node to delete",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_id"
+        ],
         "type": "object"
       }
     },
@@ -121,6 +431,45 @@
       "name": "create_foundation_edge",
       "description": "Connect two Foundation Nodes with a labeled edge in the foundations graph.\n\nBoth IDs must be foundation node UUIDs (create them first with create_foundation_node). Use a verb-like relationship_type, e.g. 'created', 'empowered', 'founded', 'is_building'.",
       "inputSchema": {
+        "properties": {
+          "bidirectional": {
+            "description": "Whether the relationship goes both ways (default false)",
+            "type": "boolean"
+          },
+          "category": {
+            "description": "Edge category (default 'foundation')",
+            "type": "string"
+          },
+          "description": {
+            "description": "Optional description of the connection",
+            "type": "string"
+          },
+          "label": {
+            "description": "Optional display label override",
+            "type": "string"
+          },
+          "relationship_type": {
+            "description": "Edge label, e.g. 'created', 'empowered', 'founded'",
+            "type": "string"
+          },
+          "source_node_id": {
+            "description": "UUID of the source foundation node",
+            "type": "string"
+          },
+          "target_node_id": {
+            "description": "UUID of the target foundation node",
+            "type": "string"
+          },
+          "visibility": {
+            "description": "inherit (default, shown to players when both ends are) or dm-secret (a tie the party does not know; nothing hints at it)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_node_id",
+          "target_node_id",
+          "relationship_type"
+        ],
         "type": "object"
       }
     },
@@ -128,6 +477,15 @@
       "name": "delete_foundation_edge",
       "description": "Delete a single edge from the foundations graph by its edge ID (the edgeId returned by create_foundation_edge). Use this to remove a duplicate or incorrect connection without deleting the nodes themselves.",
       "inputSchema": {
+        "properties": {
+          "edge_id": {
+            "description": "UUID of the foundation edge to delete",
+            "type": "string"
+          }
+        },
+        "required": [
+          "edge_id"
+        ],
         "type": "object"
       }
     },
@@ -135,6 +493,91 @@
       "name": "update_world_foundations",
       "description": "Set the structured World Foundations document (Layer 1, always loaded): the mechanical and cosmological truths of the world.\n\nOnly the sections you provide are changed; omit a section to leave it untouched. This is the structured counterpart to the prose Campaign Bible.",
       "inputSchema": {
+        "properties": {
+          "customCategories": {
+            "description": "Setting-specific systems that do not fit the typed slots; each has a name and content",
+            "items": {
+              "properties": {
+                "content": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "divineHierarchy": {
+            "description": "Pantheon / divine structure",
+            "properties": {
+              "deities": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "structure": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "fundamentalLaws": {
+            "description": "Inviolable world laws",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "magicSystem": {
+            "description": "How magic works",
+            "properties": {
+              "limitations": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "name": {
+                "type": "string"
+              },
+              "rules": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "schools": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "sources": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "planarCosmology": {
+            "description": "Planes and cosmology",
+            "properties": {
+              "planes": {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "required": [],
         "type": "object"
       }
     },
@@ -142,6 +585,8 @@
       "name": "get_constitution",
       "description": "Get the complete Campaign Bible and World Foundations overview. This is Layer 1 - call this FIRST.\n\nRETURNS: Campaign Summary, Campaign Bible (text summary), World Foundations nodes, campaignContext (genre, ruleset, tone, category vocabulary, custom fields: the same block get_campaign_context returns, so do not call that tool separately), and graphStructures: attention-only compact node and edge maps for the political, geography, and timeline projections. Political edges use the same sources and vocabulary as get_knowledge_graph (member_of, ally, rival, led_by, reports_to, and the NPC-to-NPC relationship type). When a projection key is present its edges field is an array; a projection with no attention entities is omitted.\n\n=== TIERED WORKFLOW ===\nLayer 1 - World Foundations (THIS TOOL): World truths, theme, tone\nLayer 2 - Discovery (get_entity_catalog): Names + IDs only\nLayer 3 - Session Context (get_knowledge_graph attention=true): GM-curated entities\nLayer 4 - Full Graphs (get_knowledge_graph attention=false): ALL entities\nLayer 5 - Deep Dive (get_entity): Full details for specific entities\n\n=== TOOL CATEGORIES ===\nDATABASE TOOLS: add_relationship, get_relationships, delete_relationship\nGRAPH VISUALIZATION TOOLS: add_to_entity_graph, create_entity_graph_edge\nENTITY CRUD: create_entity, update_entity, get_entity, list_entities\nCAMPAIGN BIBLE: get_campaign_bible (full blocks), update_campaign_bible\n\nPLAYER ROLE: a player connection gets its table's own constitutional layer, never the GM's.\nShape: {\"role\": \"player\", \"shared\": {\"bible\": bool, \"foundations\": bool, \"graphs\": {political, timeline, geography}},\ncampaignContext, campaignSummary (counts, recent sessions and player characters the party has seen),\ncampaignBible (only when shared, only Common Knowledge blocks), foundationNodes and foundationEdges\n(only when shared: id, name, description, category, importance, and never aiGuidance),\ngraphStructures (only the graphs the GM shared), totalTokenEstimate}.\nRead \"shared\" first: a false flag means the GM did not share that part, not that the call failed,\nso say so plainly rather than retrying. A campaign whose player portal is wiki-only refuses the call.\n\nNEXT STEPS: Use get_entity_catalog (Layer 2) then get_knowledge_graph with attention=true (Layer 3).\nFor detailed Campaign Bible editing, use get_campaign_bible.",
       "inputSchema": {
+        "properties": {},
+        "required": [],
         "type": "object"
       }
     },
@@ -149,6 +594,8 @@
       "name": "get_entity_catalog",
       "description": "Complete catalog of ALL active entities. Layer 2 discovery.\n\nRETURNS two views of the same data:\n- catalog.byType: { npcs:[{id,name}], locations:[...], factions:[...], quests:[...],\n  items:[...], lore_entries:[...], creatures:[...], player_characters:[...],\n  world_rules:[...], planar_forces:[...], custom_mechanics:[...], session_preps:[...],\n  vehicles:[...], session_recaps:[{id,name,sessionNumber}] }. Every type is always\n  present (empty array if the campaign has none of that type).\n- catalog.graphs: { political, geography, timeline, foundations } - compact\n  nodes+edges per projection, using the same edge vocabulary and sources as\n  get_knowledge_graph (political: member_of, ally, rival, led_by (faction\n  leader), reports_to (NPC superior), and NPC-to-NPC edges typed by\n  relationship_type for GM role; geography: located_in, child to parent;\n  timeline: followed_by). Each compact edge carries source, target and type\n  only. Use get_knowledge_graph for full graphs with details.\n\nAlso returns catalog.typeCounts (per-type totals) and catalog.totalEntities.\nAlso returns campaignContext, the same block get_campaign_context returns for your role\n(player-role reads carry playerGuidance in all three).\n\nPLAYER ROLE: catalog.graphs is empty. Call get_knowledge_graph for the player graphs and,\nwhen the GM shared them, for World Foundations.\n\nWHEN TO USE: At session start, before creating entities to avoid duplicates.\n\nTOKEN EFFICIENT: id + name only. Use get_entity / list_entities for full details.",
       "inputSchema": {
+        "properties": {},
+        "required": [],
         "type": "object"
       }
     },
@@ -156,6 +603,8 @@
       "name": "get_campaign_context",
       "description": "Get this campaign's genre, ruleset, and setting context. Call this early.\n\nTells you what kind of story this is (fantasy, sci-fi, horror, post-apocalyptic, ...),\nwhat game system the GM runs, which entity categories exist and what they are called in\nthis campaign, which categories are not used here, and the setting's technology and magic\nlevels. Use it to speak the campaign's vocabulary and respect its ruleset.\n\nThis same block is embedded as campaignContext in get_constitution, get_narrative_state,\nand get_entity_catalog; call this tool on its own only when you have none of those loaded\n(player-role sessions, or a quick vocabulary check).",
       "inputSchema": {
+        "properties": {},
+        "required": [],
         "type": "object"
       }
     },
@@ -163,6 +612,19 @@
       "name": "get_knowledge_graph",
       "description": "Get a knowledge graph projection with full entity details.\nSupports full graphs (Layer 4) and attention-filtered session context (Layer 3).\n\n✅ DB RELATIONSHIPS AUTO-VISUALIZE: FK fields and junction tables appear as edges automatically.\n   No need to manually add edges after using add_relationship.\n\nATTENTION FILTER (Layer 3): Set attention=true for GM-curated session-relevant entities.\n\nGRAPH TYPES:\n- 'political': Factions, NPCs, memberships, alliances, rivalries, NPC-to-NPC relationships (typed by relationship_type for GM role; player role sees the generic type related), plus led_by (faction leadership) and reports_to (NPC chain of command)\n- 'timeline': Sessions in play order (followed_by), lore, and the entities each session touched. Session -> entity edges are typed npc_encountered, location_visited, quest_progressed, loot_acquired, creature_encountered, pc_present, planar_force_mentioned, lore_learned, faction_involved; entity endpoints appear as stub nodes {id, type, label, category}, and category is the value to pass to get_entity.\n- 'geography': Locations, spatial hierarchy (located_in edges point from child to parent). GM role also gets map pins as links: each entity pinned on the map of a location in the response appears as a guest node {id, type, category, label, origin: \"map_pin\"}, where category is the value to pass to get_entity, with a found_at edge from the entity to that location (label \"Found at (map pin)\", origin \"map_pin\"). A pinned location is never a guest; it gets a found_at edge only when it is itself a node, is not the map's own location, is not a direct child of the map's location, and is not an ancestor of the map's location at any depth. With attention=true only pins on attention locations count. Removing the pin removes the link.\n- 'foundations': World Foundations nodes and their labelled edges (player role receives the player-safe projection)\n\nPLAYER ROLE: 'foundations' reaches a player connection only when the GM turned World Foundations\nsharing on. With sharing off (or a lookup that fails) the call answers the normal result\n{\"shared\": false, \"message\": \"...\"} rather than an error: tell the player plainly and do not retry.\nWith sharing on it answers the player-safe projection, GM Secret nodes and every edge touching them\ndropped. 'political', 'timeline' and 'geography' follow the GM's per-graph portal sharing switches:\na graph the GM has not shared answers the same {\"shared\": false, \"message\": \"...\"} result, and a\nshared one answers exactly the player portal's view of that graph, with GM Secret entities, entities\nthe party has not met, and GM Secret ties dropped. A campaign whose player portal is wiki-only\nrefuses every graph type.\n\nRETURNS: Nodes (entity data) + Edges (DB relationships automatically included).",
       "inputSchema": {
+        "properties": {
+          "attention": {
+            "description": "If true, only return attention-marked entities (Layer 3); for timeline, sessions are attention-gated and the entities each session touched follow from them. If false/omitted, return all (Layer 4).",
+            "type": "boolean"
+          },
+          "graph_type": {
+            "description": "Type of graph: 'political', 'timeline', 'geography', 'foundations'",
+            "type": "string"
+          }
+        },
+        "required": [
+          "graph_type"
+        ],
         "type": "object"
       }
     },
@@ -170,6 +632,8 @@
       "name": "list_entity_graphs",
       "description": "List all user-created entity graphs for this campaign.\n\nEntity graphs are custom relationship visualizations that can include any combination of entity types.\nUnlike the built-in graphs (political/timeline/geography), you can create multiple entity graphs\nwith different entity type selections.\n\nRETURNS: Array of entity graphs with id, name, description, entityTypes, membershipMode.\n\nUSE CASE: Before adding entities or edges to a graph, first list available graphs to find the right one.",
       "inputSchema": {
+        "properties": {},
+        "required": [],
         "type": "object"
       }
     },
@@ -177,6 +641,19 @@
       "name": "get_entity_graph",
       "description": "Get a specific user-created entity graph projection by ID.\n\nRETURNS: Full graph projection with nodes (entities) and edges (relationships/custom connections).\nEach node includes: id, name, type, description, and custom fields.\nEach edge includes: source, target, relationship type, and whether it's a custom edge.\n\nATTENTION FILTER:\nSet attention=true to only get entities marked for AI context (useful for focused analysis).\n\nUSE WITH: list_entity_graphs to find graph IDs first.",
       "inputSchema": {
+        "properties": {
+          "attention": {
+            "description": "If true, only return attention-marked entities. If false/omitted, return all.",
+            "type": "boolean"
+          },
+          "graph_id": {
+            "description": "UUID of the entity graph to retrieve",
+            "type": "string"
+          }
+        },
+        "required": [
+          "graph_id"
+        ],
         "type": "object"
       }
     },
@@ -184,6 +661,28 @@
       "name": "add_to_entity_graph",
       "description": "[GRAPH VISUALIZATION TOOL] Control which entities appear in a graph (MEMBERSHIP only).\nThis does NOT create relationships - it just adds an entity as a node in the graph.\n\n⚠️ NOT FOR RELATIONSHIPS:\n   - To connect entities, use add_relationship (DB relationships auto-visualize as edges)\n   - This tool only controls which entities appear as NODES in a graph\n   - DB relationships between members automatically show as edges\n\nUSE CASES:\n- Add an NPC to the political graph so they appear in the visualization\n- Add a location to a custom graph for a specific adventure\n- Control which entities are visible in get_knowledge_graph results\n\nGRAPH SELECTION (provide ONE of these):\n- graph_id: UUID for custom entity graphs (use list_entity_graphs to find IDs)\n- graph_type: \"political\" for the political web graph\n\nWORKFLOW:\n1. Use add_relationship to create the actual DB connection between entities\n2. Use this tool ONLY if you want to add an entity to a graph for visibility\n\nSUPPORTED ENTITY TYPES:\npc, npc, faction, location, item, creature, deity, quest, lore, session\n\nRETURNS: Success confirmation with entity details.",
       "inputSchema": {
+        "properties": {
+          "entity_id": {
+            "description": "UUID of the existing entity to add",
+            "type": "string"
+          },
+          "entity_type": {
+            "description": "Type of entity: pc, npc, faction, location, item, creature, deity, quest, lore, session",
+            "type": "string"
+          },
+          "graph_id": {
+            "description": "UUID of custom entity graph (use this OR graph_type, not both)",
+            "type": "string"
+          },
+          "graph_type": {
+            "description": "Built-in graph type: 'political' (use this OR graph_id, not both)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_type",
+          "entity_id"
+        ],
         "type": "object"
       }
     },
@@ -191,6 +690,55 @@
       "name": "create_entity_graph_edge",
       "description": "[GRAPH VISUALIZATION TOOL] Create a CUSTOM edge that doesn't exist in the database schema.\n\n⚠️ DON'T USE FOR DB RELATIONSHIPS:\n   - If a relationship CAN be stored in the DB (faction_id, allied_faction_ids, etc.), use add_relationship\n   - DB relationships automatically appear as edges in get_knowledge_graph\n   - This tool is ONLY for narrative/thematic connections not in the DB schema\n\nUSE CASES (edges that DON'T exist in DB):\n- \"secretly_manipulating\" between two NPCs (no DB field for this)\n- \"foreshadows\" between a lore entry and a quest\n- \"thematically_mirrors\" between two locations\n- Plot threads, callbacks, character arcs not captured by FK fields\n\nDON'T USE FOR:\n- NPC belongs to faction → use add_relationship (sets faction_id)\n- Location is child of location → use add_relationship (sets parent_location_id)\n- NPC is leader of faction → use add_relationship (sets leader_id)\n\nGRAPH SELECTION (provide ONE of these):\n- graph_id: UUID for custom entity graphs (use list_entity_graphs to find IDs)\n- graph_type: \"political\" for the political web graph\n\nEDGE CATEGORIES:\n- plot_thread: Narrative connections\n- callback: Story callbacks/references\n- character_arc: Character development links\n- thematic: Thematic/symbolic connections\n- custom: Any other non-DB relationship\n\nRETURNS: Created edge with ID and full details.",
       "inputSchema": {
+        "properties": {
+          "category": {
+            "description": "Edge category: plot_thread, callback, character_arc, item_transfer, lore_reveal, quest_progress, thematic, custom (default: custom)",
+            "type": "string"
+          },
+          "description": {
+            "description": "Optional description of this relationship",
+            "type": "string"
+          },
+          "graph_id": {
+            "description": "UUID of custom entity graph (use this OR graph_type, not both)",
+            "type": "string"
+          },
+          "graph_type": {
+            "description": "Built-in graph type: 'political' (use this OR graph_id, not both)",
+            "type": "string"
+          },
+          "relationship_type": {
+            "description": "Name/label for this relationship (e.g., 'mentors', 'rivals_with', 'protects')",
+            "type": "string"
+          },
+          "source_entity_id": {
+            "description": "UUID of source entity",
+            "type": "string"
+          },
+          "source_entity_type": {
+            "description": "Type of source entity",
+            "type": "string"
+          },
+          "target_entity_id": {
+            "description": "UUID of target entity",
+            "type": "string"
+          },
+          "target_entity_type": {
+            "description": "Type of target entity",
+            "type": "string"
+          },
+          "visibility": {
+            "description": "inherit (default, shown to players when both ends are) or dm-secret (a tie the party does not know; nothing hints at it)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_entity_type",
+          "source_entity_id",
+          "target_entity_type",
+          "target_entity_id",
+          "relationship_type"
+        ],
         "type": "object"
       }
     },
@@ -198,6 +746,33 @@
       "name": "toggle_graph_attention",
       "description": "Toggle attention status for an entity in a graph, elevating it from Layer 4 (full graph) to Layer 3 (AI context) or vice versa.\n\nLAYER ARCHITECTURE:\n- Layer 3: Attention-filtered context (entities marked with attention=true)\n- Layer 4: Full graph (all entities regardless of attention)\n\nThis tool allows AI to mark entities as important for session context, making them appear in Layer 3 filtered views.\n\nGRAPH SELECTION (provide ONE of these):\n- graph_id: UUID for custom entity graphs\n- graph_type: Built-in graph type: 'political', 'timeline', 'geography'\n\nUSE CASES:\n- Mark NPCs as relevant for upcoming session prep\n- Highlight locations the party is traveling to\n- Flag factions involved in current plot threads\n- Elevate sessions containing important callbacks\n\nWORKFLOW:\n1. get_knowledge_graph with attention=false (Layer 4) - See all entities\n2. Identify entities that should be in session context\n3. toggle_graph_attention with attention=true - Elevate to Layer 3\n4. get_knowledge_graph with attention=true (Layer 3) - Verify filtered view\n\nRETURNS: Updated entity with new attention status.",
       "inputSchema": {
+        "properties": {
+          "attention": {
+            "description": "Set to true to elevate to Layer 3 (AI context), false to demote to Layer 4 only",
+            "type": "boolean"
+          },
+          "entity_id": {
+            "description": "UUID of the entity to toggle attention for",
+            "type": "string"
+          },
+          "entity_type": {
+            "description": "Type of entity: pc, npc, faction, location, item, creature, deity, quest, lore, session",
+            "type": "string"
+          },
+          "graph_id": {
+            "description": "UUID of custom entity graph (use this OR graph_type, not both)",
+            "type": "string"
+          },
+          "graph_type": {
+            "description": "Built-in graph type: 'political', 'timeline', 'geography' (use this OR graph_id, not both)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_type",
+          "entity_id",
+          "attention"
+        ],
         "type": "object"
       }
     },
@@ -205,6 +780,13 @@
       "name": "get_narrative_state",
       "description": "Get the current narrative state of the campaign (Tier 1.5).\n\nThis is the temporal context layer - use it after get_constitution to understand\n\"where we are in the story\". Returns a comprehensive snapshot including:\n\n- Recent sessions (last 3) with summaries and key events, in play order, newest first: session number, then session date, over every canonical status, so the newest is the last session played even when it is non-canon, retconned or hypothetical. Archived recaps are skipped. GM tokens also receive each session's canonicalStatus (canon, non-canon, retconned, hypothetical) and its dmConsequences and dmBehindScenes (the GM-only recap notes), so causality does not require a get_entity call per recap\n- Open threads grouped by major (story-critical) and minor (callback opportunities)\n- Canonical facts (immutable historical events marked on key events of canon sessions only; a non-canon, retconned or hypothetical recap never adds one)\n- Active campaign arcs\n- Recent session observations (only those of the sessions returned above)\n- campaignContext (genre, ruleset, tone, category vocabulary; the same block get_campaign_context returns for your role)\n- PLAYER ROLE: recent sessions are the ones the portal shows this player, without canonicalStatus; key events carry id and description only, canonicalFacts is always empty, and open threads, arcs and observations are omitted.\n\nRecommended AI workflow:\n1. get_constitution → World truths\n2. get_narrative_state → Story progression (THIS TOOL)\n3. get_entity_catalog → What exists\n4. get_knowledge_graph → Current session context",
       "inputSchema": {
+        "properties": {
+          "recent_session_count": {
+            "description": "Number of recent sessions to include (default: 3, max: 10)",
+            "type": "number"
+          }
+        },
+        "required": [],
         "type": "object"
       }
     },
@@ -212,6 +794,38 @@
       "name": "add_relationship",
       "description": "[DATABASE TOOL] Create a DATABASE relationship between two entities.\nModifies actual FK fields on entity tables or creates rows in junction tables.\n\n✅ AUTO-VISUALIZATION: DB relationships automatically appear in get_knowledge_graph!\n   - FK fields and junction tables are visualized as edges in political/timeline/geography graphs\n   - NO need to also call add_to_entity_graph or create_entity_graph_edge for DB relationships\n   - Those tools are ONLY for custom edges that don't exist in the database schema\n\nDB relationships are the edges of get_knowledge_graph and of the app's Political Web.\nWriting a political relationship (NPC-NPC, faction membership, alliance, rivalry, PC ties)\nalso places both endpoints on the political graph if they were not members yet, so\nadd_to_entity_graph(graph_type=political) is never needed after this call. The same\nholds for the three political FK writes: npcs.faction_id (member_of),\nnpcs.superior_npc_id (reports_to) and factions.leader_id (led_by).\nCustom entity graphs are not touched.\n\n⚠️ DON'T DUPLICATE: If you use add_relationship, the edge will show up in graphs automatically.\n\nAUTOMATICALLY ROUTES TO:\n1. FK FIELD - If a direct field exists (faction_id, parent_location_id, etc.)\n2. JUNCTION TABLE - If no FK exists but a junction table does\n\nFK FIELDS BY CATEGORY (relationship_type picks the field):\n- npcs: faction_id→factions (primary_faction), superior_npc_id→npcs (reports_to)\n- locations: parent_location_id→locations (parent, located_in)\n- factions: leader_id→npcs (led_by)\n- quests: quest_giver_id→npcs (quest_giver), started_session_id and completed_session_id→session_recaps\n- items: owner_npc_id→npcs, owner_pc_id→player_characters, location_id→locations, quest_id→quests\n- planar_forces: high_priest_id→npcs (high_priest)\n\nJUNCTION TABLES: Used when no FK field matches. relationship_type becomes the edge label.\nThree pairs have several tables, and relationship_type must pick one:\n- factions→factions: ally, allied_with, alliance, allied_faction_ids (faction_alliances); rival, rival_of, enemy, hostile, war, rival_faction_ids (faction_rivalries); parent_of (faction_hierarchy, source is the parent)\n- factions→locations: controls, territory, territory_ids (faction_territory); presence, operates_in (faction_presence)\n- planar_forces→planar_forces: ally, divine_ally, allied_deity_ids (planar_force_alliances); enemy, divine_enemy, opposes, rival_deity_ids (planar_force_rivalries)\nThe entity's relation field names (allied_faction_ids, rival_faction_ids, territory_ids, allied_deity_ids, rival_deity_ids) are accepted as these types.\nAny other type for these pairs is refused with the accepted list.\n\nEXAMPLE - Set NPC's primary faction (FK):\n{\"source_category\": \"npcs\", \"source_entity_id\": \"...\", \"target_category\": \"factions\", \"target_entity_id\": \"...\", \"relationship_type\": \"primary_faction\"}\n\nReturns: {type: \"fk_field\"|\"junction\", field/table, success}",
       "inputSchema": {
+        "properties": {
+          "relationship_type": {
+            "description": "Relationship type/edge label (e.g., member, allied_with, parent, or a relation field name such as rival_faction_ids). Used for routing and as junction table label.",
+            "type": "string"
+          },
+          "source_category": {
+            "description": "Category: npcs, locations, factions, quests, items, lore_entries, player_characters, creatures",
+            "type": "string"
+          },
+          "source_entity_id": {
+            "description": "UUID of the source entity",
+            "type": "string"
+          },
+          "target_category": {
+            "description": "Category of target entity",
+            "type": "string"
+          },
+          "target_entity_id": {
+            "description": "UUID of the target entity",
+            "type": "string"
+          },
+          "visibility": {
+            "description": "inherit (default, shown to players when both ends are) or dm-secret (a tie the party does not know; nothing hints at it)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_entity_id",
+          "source_category",
+          "target_entity_id",
+          "target_category"
+        ],
         "type": "object"
       }
     },
@@ -219,6 +833,28 @@
       "name": "get_relationships",
       "description": "[DATABASE TOOL] Get all DATABASE relationships for an entity: junction tables AND FK fields.\nReturns actual data connections, not custom graph visualization edges.\n\nJUNCTION RELATIONSHIPS: Rich metadata (role, rank, loyalty) in dedicated tables.\nFK RELATIONSHIPS: Direct field references on entity tables.\n\nOUTGOING FKs (from entity): faction_id, parent_location_id, leader_npc_id, giver_npc_id, owner_id, etc.\nINCOMING FKs (to entity): Other entities referencing this one via their FK fields.\n\nFILTERING:\n- target_category: Only show relationships to specific category\n- direction: \"outgoing\", \"incoming\", or \"both\" (default)\n\nRETURNS:\n{\n  entityId, category,\n  junctionRelationships: [\n    { kind: \"junction\", id, junctionTable, sourceEntityId, sourceCategory,\n      targetEntityId, targetCategory, relationshipType, metadata, createdAt }\n  ],\n  fkRelationships: {\n    outgoing: [ { kind: \"fk\", fkField: \"table.column\", sourceEntityId, ... } ],\n    incoming: [ { kind: \"fk\", fkField: \"table.column\", sourceEntityId, ... } ]\n  },\n  totalJunction, totalFKOutgoing, totalFKIncoming\n}\n\nNOTES:\n- Each row carries a 'kind' discriminator: \"junction\" or \"fk\".\n- Junction rows have a stable id + createdAt; FK rows do not (they're derived\n  from an FK column on an entity row), so id/createdAt are omitted on FK rows.\n- 'junctionTable' is only set on junction rows; 'fkField' is only set on FK\n  rows and contains the \"table.column\" path (e.g. \"npcs.faction_id\").\n- targetCategory on an incoming junction row is the queried entity's category;\n  sourceCategory is the other side.\n- A junction table reachable from both sides (faction_members) is listed once\n  per call: with direction both or outgoing it appears with this entity as\n  source; with direction incoming it appears with this entity as target.\n- An NPC's faction can be stored two ways and both are returned when present:\n  fkRelationships.outgoing with relationshipType primary_faction\n  (npcs.faction_id, the primary faction) and a junctionRelationships row with\n  junctionTable faction_members (the faction roster, with role/rank/loyalty).\n  A matching pair is one membership, not two.",
       "inputSchema": {
+        "properties": {
+          "category": {
+            "description": "Category: npcs, locations, factions, quests, items, lore_entries, player_characters, creatures",
+            "type": "string"
+          },
+          "direction": {
+            "description": "outgoing, incoming, or both (default: both)",
+            "type": "string"
+          },
+          "entity_id": {
+            "description": "UUID of the entity",
+            "type": "string"
+          },
+          "target_category": {
+            "description": "Filter to relationships with this category only",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "category"
+        ],
         "type": "object"
       }
     },
@@ -226,6 +862,35 @@
       "name": "delete_relationship",
       "description": "[DATABASE TOOL] Remove a DATABASE relationship between two entities.\nClears actual FK fields or deletes junction table rows.\n\n⚠️ NOT for visualization graphs - this modifies real database data.\n\nAUTOMATICALLY ROUTES TO:\n1. FK FIELD - Clears single FK or removes from array field\n2. JUNCTION TABLE - Deletes row from junction table\n\nREQUIRED: source_entity_id + target_entity_id + both categories + relationship_type\nThe relationship_type determines which FK field or junction table to target.\n\nEXAMPLE - Remove NPC from faction (FK):\n{\"source_category\": \"npcs\", \"source_entity_id\": \"...\", \"target_category\": \"factions\", \"target_entity_id\": \"...\", \"relationship_type\": \"primary_faction\"}\n\nEXAMPLE - Remove junction relationship:\n{\"source_category\": \"npcs\", \"source_entity_id\": \"...\", \"target_category\": \"factions\", \"target_entity_id\": \"...\", \"relationship_type\": \"member\"}",
       "inputSchema": {
+        "properties": {
+          "relationship_type": {
+            "description": "Relationship type (e.g., primary_faction, member, allied_with)",
+            "type": "string"
+          },
+          "source_category": {
+            "description": "Category of source entity",
+            "type": "string"
+          },
+          "source_entity_id": {
+            "description": "UUID of the source entity",
+            "type": "string"
+          },
+          "target_category": {
+            "description": "Category of target entity",
+            "type": "string"
+          },
+          "target_entity_id": {
+            "description": "UUID of the target entity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_entity_id",
+          "source_category",
+          "target_entity_id",
+          "target_category",
+          "relationship_type"
+        ],
         "type": "object"
       }
     },
@@ -233,6 +898,13 @@
       "name": "get_open_threads",
       "description": "Get unresolved narrative threads for the campaign.\n\nOpen threads represent narrative obligations: unresolved consequences, promises,\nmysteries, foreshadowing, and callback opportunities. Use this to understand\nwhat story elements need attention.\n\nReturns threads grouped by major (story-critical) and minor (nice-to-resolve).\n\nEvery thread carries a status of 'open' or 'resolved'. With status=all both\nkinds are interleaved inside the major and minor groups, so read the status\nfield rather than testing for resolvedSessionId.\n\nThread types:\n- consequence: Action that will have repercussions\n- promise: Commitment made to NPC/faction\n- mystery: Unanswered question\n- foreshadowing: Setup for future payoff\n- callback_opportunity: Minor thread worth revisiting\n\nUse this tool after get_constitution to understand \"where we are in the story\".",
       "inputSchema": {
+        "properties": {
+          "status": {
+            "description": "Filter by status: 'open' (default), 'resolved', or 'all'",
+            "type": "string"
+          }
+        },
+        "required": [],
         "type": "object"
       }
     },
@@ -240,6 +912,31 @@
       "name": "create_open_thread",
       "description": "Create a new open thread (narrative obligation) for the campaign.\n\nOnly available to GM-role connections. Creates a thread that tracks an unresolved\nnarrative element that needs eventual resolution.\n\nThread types: consequence, promise, mystery, foreshadowing, callback_opportunity\nSet is_major=true for story-critical threads that must eventually be addressed.",
       "inputSchema": {
+        "properties": {
+          "created_session_id": {
+            "description": "UUID of the session where this thread was created; a start progression is recorded at this session",
+            "type": "string"
+          },
+          "description": {
+            "description": "Additional context about the thread",
+            "type": "string"
+          },
+          "is_major": {
+            "description": "Whether this is a story-critical thread (default: false)",
+            "type": "boolean"
+          },
+          "thread_type": {
+            "description": "Type: consequence, promise, mystery, foreshadowing, callback_opportunity (default: consequence)",
+            "type": "string"
+          },
+          "title": {
+            "description": "Short title describing the unresolved thread",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
         "type": "object"
       }
     },
@@ -247,6 +944,20 @@
       "name": "resolve_open_thread",
       "description": "Mark an open thread as resolved.\n\nOnly available to GM-role connections. Links the resolution to the session\nwhere it was addressed.\n\nRecords a resolution progression at resolved_session_id unless one already\nexists there; call add_thread_progression with progression_type=resolution\nfirst if the closing entry should carry a custom title, description, or\nkey_event_id.",
       "inputSchema": {
+        "properties": {
+          "resolved_session_id": {
+            "description": "UUID of the session where this thread was resolved",
+            "type": "string"
+          },
+          "thread_id": {
+            "description": "UUID of the thread to resolve",
+            "type": "string"
+          }
+        },
+        "required": [
+          "thread_id",
+          "resolved_session_id"
+        ],
         "type": "object"
       }
     },
@@ -254,6 +965,15 @@
       "name": "unresolve_open_thread",
       "description": "Reopen a previously resolved thread.\n\nOnly available to GM-role connections. Clears the resolution, returning the\nthread to an open/unresolved state.",
       "inputSchema": {
+        "properties": {
+          "thread_id": {
+            "description": "UUID of the thread to unresolve",
+            "type": "string"
+          }
+        },
+        "required": [
+          "thread_id"
+        ],
         "type": "object"
       }
     },
@@ -261,6 +981,31 @@
       "name": "update_open_thread",
       "description": "Update an existing open thread's details.\n\nOnly available to GM-role connections. Provide only the fields you want to change.\nAt least one field must be provided.\n\nThread types: consequence, promise, mystery, foreshadowing, callback_opportunity",
       "inputSchema": {
+        "properties": {
+          "description": {
+            "description": "New description for the thread",
+            "type": "string"
+          },
+          "is_major": {
+            "description": "Whether this is a story-critical thread",
+            "type": "boolean"
+          },
+          "thread_id": {
+            "description": "UUID of the thread to update",
+            "type": "string"
+          },
+          "thread_type": {
+            "description": "New type: consequence, promise, mystery, foreshadowing, callback_opportunity",
+            "type": "string"
+          },
+          "title": {
+            "description": "New title for the thread",
+            "type": "string"
+          }
+        },
+        "required": [
+          "thread_id"
+        ],
         "type": "object"
       }
     },
@@ -268,6 +1013,15 @@
       "name": "get_thread_progressions",
       "description": "Get the progression history of a specific story thread.\n\nShows how a thread evolved across sessions, from creation through updates,\ncomplications, and (optionally) resolution. Each progression includes the\nsession context and any linked key events.\n\nUse this to understand the narrative arc of a specific thread.",
       "inputSchema": {
+        "properties": {
+          "thread_id": {
+            "description": "UUID of the thread to get progressions for",
+            "type": "string"
+          }
+        },
+        "required": [
+          "thread_id"
+        ],
         "type": "object"
       }
     },
@@ -275,6 +1029,46 @@
       "name": "add_thread_progression",
       "description": "Record a new progression point for a story thread at a specific session.\n\nOnly available to GM-role connections. Creates a progression that tracks how\na thread advanced, encountered complications, or was resolved during a session.\n\nProgression types:\n- start: Thread begins (usually auto-created)\n- update: Thread advances or develops\n- complication: Thread encounters a setback or twist\n- resolution: Thread concludes\n\nOptionally link to a specific key event from the session by providing its\nstable ID (key_event_id) or legacy index (key_event_index, 0-based).\nPrefer key_event_id when available: it survives reordering of key events.",
       "inputSchema": {
+        "properties": {
+          "description": {
+            "description": "Detailed explanation of the progression",
+            "type": "string"
+          },
+          "importance": {
+            "description": "Importance level 1-5 (default: 3)",
+            "type": "number"
+          },
+          "key_event_id": {
+            "description": "Stable ID of the key event to link (preferred over key_event_index)",
+            "type": "string"
+          },
+          "key_event_index": {
+            "description": "0-based index into the session's key_events array to link (legacy, prefer key_event_id)",
+            "type": "number"
+          },
+          "progression_type": {
+            "description": "Type: start, update, complication, or resolution",
+            "type": "string"
+          },
+          "session_id": {
+            "description": "UUID of the session where this progression occurred",
+            "type": "string"
+          },
+          "thread_id": {
+            "description": "UUID of the thread",
+            "type": "string"
+          },
+          "title": {
+            "description": "Short summary of what happened to the thread",
+            "type": "string"
+          }
+        },
+        "required": [
+          "thread_id",
+          "session_id",
+          "progression_type",
+          "title"
+        ],
         "type": "object"
       }
     },
@@ -282,6 +1076,19 @@
       "name": "get_wiki_page",
       "description": "Retrieve a wiki page by ID with its content blocks.\n\nSCOPE: the campaign wiki space only. Party and player spaces are not reachable over MCP; their page ids answer \"page not found\".\n\nRETURNS: id, title, slug, icon, depth, visibility, blocks[], breadcrumb[], children[], tokenEstimate.\n\nBlocks contain: type, content, text, position, visibility.\n\"text\" is the block as flat prose. To EDIT a block, wrap new prose back into the content object update_wiki_block documents (update takes a content OBJECT, not this string). A table block's text is a markdown grid (| cell | cell |); a page-handle block's text is its page token.\nUse include_blocks=false for metadata only.\n\nVISIBILITY: player tokens see a page only when its EFFECTIVE visibility admits them: dm-secret is dropped, player-knowledge and system admit every player in the campaign, and inherit resolves through the page's handle block first, then the parent chain. Denied and unknown pages both answer \"page not found\". The Campaign Bible reaches player connections only through get_campaign_bible and get_constitution, only the blocks the GM marked Common Knowledge, and only when the GM has turned sharing on.\n\nEntity links: text may contain @[Label](entity://<category>/<uuid>) tokens; valid tokens become real entity mentions, and reads emit the same syntax.\nPage links: text may contain @[Title](page://<uuid>) tokens naming pages in the campaign wiki space (ids from get_wiki_tree); valid tokens become real page links, reads emit the same syntax, and a page-handle block reads as its page token.",
       "inputSchema": {
+        "properties": {
+          "include_blocks": {
+            "description": "Whether to include content blocks (default: true). Set false for metadata only.",
+            "type": "boolean"
+          },
+          "page_id": {
+            "description": "The UUID of the wiki page to retrieve",
+            "type": "string"
+          }
+        },
+        "required": [
+          "page_id"
+        ],
         "type": "object"
       }
     },
@@ -289,6 +1096,13 @@
       "name": "get_wiki_tree",
       "description": "Retrieve the hierarchical page tree of the CAMPAIGN wiki space.\n\nUse to understand wiki structure, find content locations, identify parent pages for nesting.\n\nSCOPE: the campaign space only - the party wiki and player notebooks are not listed and are not reachable over MCP. (get_campaign_context's wikiPageCount spans every space, so it can read higher than this tree's totalPages.)\n\nRETURNS: pages[] (nested tree), totalPages, tokenEstimate.\nEach node: id, title, slug, icon, depth, visibility, hasChildren, children[].\n\nUse max_depth to limit traversal (default: 10, max: 20).\n\nVISIBILITY: player tokens see only pages whose EFFECTIVE visibility admits them (dm-secret dropped, player-knowledge and system admitted, inherit resolved handle-first then up the parent chain). The Campaign Bible reaches player connections only through get_campaign_bible and get_constitution, only the blocks the GM marked Common Knowledge, and only when the GM has turned sharing on.",
       "inputSchema": {
+        "properties": {
+          "max_depth": {
+            "description": "Maximum depth to traverse (default: 10, max: 20). Use lower values for overview.",
+            "type": "number"
+          }
+        },
+        "required": [],
         "type": "object"
       }
     },
@@ -296,6 +1110,27 @@
       "name": "create_wiki_page",
       "description": "Create a new wiki page in the campaign.\n\nIMPORTANT WORKFLOW FOR NESTED PAGES:\nWiki pages support infinite nesting. To create a hierarchy:\n1. Create parent page FIRST (omit parent_id for root level)\n2. Read the returned page_id from the response\n3. Create child pages using that ID as parent_id\n4. Add content blocks to each page\n\nEXAMPLE - Creating a location hierarchy:\nStep 1: Create continent page\n  {\"title\": \"Eldoria\", \"icon\": \"🌍\"}\n  Returns: {\"id\": \"continent-uuid\", ...}\n\nStep 2: Create region as child\n  {\"title\": \"The Northern Reaches\", \"parent_id\": \"continent-uuid\", \"icon\": \"⛰️\"}\n  Returns: {\"id\": \"region-uuid\", ...}\n\nStep 3: Create city as grandchild\n  {\"title\": \"Frostholm\", \"parent_id\": \"region-uuid\", \"icon\": \"🏰\"}\n\nVISIBILITY INHERITANCE:\n- inherit: Uses the linking page block's visibility, else the parent page's (default for child pages; not allowed on a root page)\n- common-knowledge: Visible to all\n- dm-secret: Only GM role can see\n- player-knowledge: Visible to every player in the campaign, the same audience as common-knowledge. Use it to record what the party has learned, as distinct from what the world already knows; the difference is what it tracks, not who can read it\n- system: Rules and meta notes, visible to players like common-knowledge\n\nPages are created in the campaign wiki space; party and player spaces are not writable over MCP.\n\nSLUG GENERATION:\nThe slug is auto-generated from the title (e.g., \"The Northern Reaches\" → \"the-northern-reaches\").\nSlugs are unique within each parent context.\n\nIMPORTANT - CREATE NAVIGATION LINKS:\nAfter creating a new page, create a \"page\" block on the parent page (or home page)\nto make navigation intuitive. While pages appear in the sidebar, clickable page cards\nin the wiki content provide better user experience.\n\nRECOMMENDED WORKFLOW:\n1. Create the new page with create_wiki_page\n2. Add content blocks to the new page with batch_create_wiki_blocks\n3. Create a \"page\" block on the parent/home page:\n   {\"type\": \"page\", \"content\": {\"pageId\": \"new-page-uuid\", \"title\": \"Page Title\", \"icon\": \"📜\"}}\n\nInline alternative: write @[Page Title](page://new-page-uuid) inside any text block's text to link the page mid-sentence.\n\nReturns: Created page with ID, slug, depth, and breadcrumb.",
       "inputSchema": {
+        "properties": {
+          "icon": {
+            "description": "Optional emoji or icon for the page (e.g., 📜, 🏰, ⚔️)",
+            "type": "string"
+          },
+          "parent_id": {
+            "description": "UUID of the parent page. Omit for root-level pages.",
+            "type": "string"
+          },
+          "title": {
+            "description": "The title for the new page (max 255 chars)",
+            "type": "string"
+          },
+          "visibility": {
+            "description": "Visibility: inherit (default for child pages), common-knowledge, dm-secret, player-knowledge, system",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
         "type": "object"
       }
     },
@@ -303,6 +1138,34 @@
       "name": "create_wiki_block",
       "description": "Create a single content block within a wiki page.\n\nFor multiple blocks prefer batch_create_wiki_blocks: it chains each block after the previous one deterministically, so stored order matches your array. Sequential single creates are ordered too; only CONCURRENT create calls can interleave.\n\nBLOCK TYPES AND CONTENT STRUCTURE:\nText is wrapped in a \"content\" array with text fragments.\n\n1. TEXT (paragraphs, prose)\n   type: \"text\"\n   content: {\"content\": [{\"text\": \"Your paragraph content here.\"}]}\n\n2. HEADING (section headers, levels 1-6)\n   type: \"heading\"\n   content: {\"content\": [{\"text\": \"Section Title\"}], \"level\": 2}\n\n3. BULLET (unordered list item)\n   type: \"bullet\"\n   content: {\"content\": [{\"text\": \"List item text\"}]}\n   Note: Create multiple bullet blocks for a list\n\n4. NUMBERED (ordered list item)\n   type: \"numbered\"\n   content: {\"content\": [{\"text\": \"Numbered item text\"}]}\n\n5. QUOTE (block quotation)\n   type: \"quote\"\n   content: {\"content\": [{\"text\": \"Quoted text or dialogue\"}]}\n\n6. CALLOUT (highlighted information box)\n   type: \"callout\"\n   content: {\"content\": [{\"text\": \"Important message\"}], \"type\": \"info\"}\n   Types: info (blue), warning (yellow), success (green), error (red)\n\n7. DIVIDER (horizontal separator)\n   type: \"divider\"\n   content: {}\n\n8. PAGE (link to another wiki page)\n   type: \"page\"\n   content: {\"pageId\": \"uuid\", \"title\": \"Page Name\", \"icon\": \"📜\"}\n\n9. IMAGE\n   type: \"image\"\n   content: {\"url\": \"https://...\", \"caption\": \"Optional caption\"}\n\n10. TABLE (simple grid: header row + body rows)\n   type: \"table\"\n   content: {\"markdown\": \"| Name | Role |\\n| --- | --- |\\n| Varka | Chief |\"}\n   Or pass a canonical TipTap table doc directly. Cells are paragraph-only (no colspan/rowspan, no nested blocks); entity and page tokens work inside cells. Reads render the grid back as markdown in \"text\". Not allowed on the Campaign Bible.\n\nPOSITIONING:\n- Use after_block_id to insert after a specific block\n- Omit after_block_id to append to end of page\n\nVISIBILITY:\n- inherit: Uses page's visibility (default)\n- common-knowledge: Visible to all\n- dm-secret: GM only (great for secret notes)\n- player-knowledge: Visible to every player in the campaign. Records that the party knows this, as distinct from common-knowledge world facts; both reach the same audience\n- system: Rules and meta notes, visible to players like common-knowledge\nOn the Campaign Bible, blocks are GM Secret by default. Set visibility to common-knowledge only for blocks players may know, such as world mechanics or everyday life. Leave secrets and campaign spine at the default.\n\nEXAMPLE - Adding a GM secret note:\n{\n  \"page_id\": \"npc-page-uuid\",\n  \"type\": \"callout\",\n  \"content\": {\"content\": [{\"text\": \"This NPC is secretly the villain's spy\"}], \"type\": \"warning\"},\n  \"visibility\": \"dm-secret\"\n}\n\nEntity links: text may contain @[Label](entity://<category>/<uuid>) tokens; valid tokens become real entity mentions, and reads emit the same syntax.\nPage links: text may contain @[Title](page://<uuid>) tokens naming other wiki pages in this campaign (ids from get_wiki_tree); valid tokens become real page links, reads emit the same syntax, and a page-handle block reads as its page token.",
       "inputSchema": {
+        "properties": {
+          "after_block_id": {
+            "description": "UUID of block to insert after. Omit to append to end.",
+            "type": "string"
+          },
+          "content": {
+            "description": "Block content as JSON object (see description for format per type)",
+            "properties": {},
+            "type": "object"
+          },
+          "page_id": {
+            "description": "The UUID of the page to add the block to",
+            "type": "string"
+          },
+          "type": {
+            "description": "Block type: text, heading, bullet, numbered, quote, divider, callout, page, image, table",
+            "type": "string"
+          },
+          "visibility": {
+            "description": "Visibility: inherit (default, follows the page's visibility), common-knowledge, dm-secret, player-knowledge, system",
+            "type": "string"
+          }
+        },
+        "required": [
+          "page_id",
+          "type",
+          "content"
+        ],
         "type": "object"
       }
     },
@@ -310,6 +1173,24 @@
       "name": "update_wiki_block",
       "description": "Update an existing wiki block's content or visibility.\n\nPARTIAL UPDATES:\nYou only need to provide fields you want to change.\n- To update text: {\"content\": {\"content\": [{\"text\": \"new text\"}]}}\n- To change visibility: {\"visibility\": \"dm-secret\"}\n- Both at once: {\"content\": {...}, \"visibility\": \"...\"}\n\nCONTENT STRUCTURE BY TYPE:\n- text/bullet/numbered/quote: {\"content\": [{\"text\": \"new content\"}]}\n- heading: {\"content\": [{\"text\": \"New Title\"}], \"level\": 2}\n- callout: {\"content\": [{\"text\": \"message\"}], \"type\": \"warning\"}\n- image: {\"url\": \"...\", \"caption\": \"...\"}\n- table: {\"markdown\": \"| a | b |\\n| --- | --- |\\n| 1 | 2 |\"} or a canonical table doc; the write replaces the WHOLE table and is validated (paragraph-only cells, no spans)\n\nTABLE CAUTION: a user clicking into a table in an open browser tab re-saves their copy about two seconds later, so an MCP table edit made while that table is on someone's screen can be overwritten (last writer wins). Prefer table edits between sessions.\n\nEXAMPLE - Making a block secret:\n{\n  \"block_id\": \"block-uuid\",\n  \"visibility\": \"dm-secret\"\n}\n\nNOTE: Block type cannot be changed. Delete and recreate if type change needed.\nNOTE: Page-handle blocks (type \"page\") accept only visibility here; their content is refused.\nCAMPAIGN BIBLE: On the Campaign Bible, blocks are GM Secret by default. Set visibility to common-knowledge only for blocks players may know, such as world mechanics or everyday life. Leave secrets and campaign spine at the default.\n\nEntity links: text may contain @[Label](entity://<category>/<uuid>) tokens; valid tokens become real entity mentions, and reads emit the same syntax.\nPage links: text may contain @[Title](page://<uuid>) tokens naming other wiki pages in this campaign (ids from get_wiki_tree); valid tokens become real page links, reads emit the same syntax, and a page-handle block reads as its page token.",
       "inputSchema": {
+        "properties": {
+          "block_id": {
+            "description": "The UUID of the block to update",
+            "type": "string"
+          },
+          "content": {
+            "description": "New block content as JSON object (structure depends on block type)",
+            "properties": {},
+            "type": "object"
+          },
+          "visibility": {
+            "description": "Visibility: inherit (follows the page's visibility), common-knowledge, dm-secret, player-knowledge, system; omit to leave it unchanged",
+            "type": "string"
+          }
+        },
+        "required": [
+          "block_id"
+        ],
         "type": "object"
       }
     },
@@ -317,6 +1198,23 @@
       "name": "move_wiki_block",
       "description": "Move a block to a new position within the same page or to a different page.\n\nSAME-PAGE REORDERING:\nMove a block to a different position on its current page.\n- Omit target_page_id\n- Set after_block_id to position after a specific block\n- Omit after_block_id to move to end of page\n\nEXAMPLE - Move to after another block:\n{\n  \"block_id\": \"block-to-move-uuid\",\n  \"after_block_id\": \"target-position-uuid\"\n}\n\nCROSS-PAGE MOVE:\nMove a block to a completely different wiki page.\n- Set target_page_id to the destination page\n- Optionally set after_block_id for position on new page\n\nEXAMPLE - Move to different page:\n{\n  \"block_id\": \"block-to-move-uuid\",\n  \"target_page_id\": \"destination-page-uuid\"\n}\n\nNOTE: Cross-page moves create a new block on the target page and delete the original.\nThe returned block ID will be different from the original.\nNOTE: Page-handle blocks (type \"page\") cannot move cross-page (the handle governs its page's visibility). Blocks only move between pages of the campaign wiki space, and table blocks cannot move onto the Campaign Bible.",
       "inputSchema": {
+        "properties": {
+          "after_block_id": {
+            "description": "Insert after this block UUID. Omit to append to end.",
+            "type": "string"
+          },
+          "block_id": {
+            "description": "The UUID of the block to move",
+            "type": "string"
+          },
+          "target_page_id": {
+            "description": "Destination page UUID. Omit to reorder within current page.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "block_id"
+        ],
         "type": "object"
       }
     },
@@ -324,6 +1222,15 @@
       "name": "delete_wiki_block",
       "description": "Delete a wiki block from a page.\n\nPERMANENT: block deletion is a HARD delete with no undo (only PAGES go to the wiki trash).\nOther blocks on the page automatically reposition.\n\nPAGE-HANDLE CASCADE: deleting a \"page\" block also moves its linked page and that page's sub-pages to the wiki trash, exactly like deleting the page card in the UI - the response message says when this happened. The Campaign Bible's title block cannot be deleted.\n\nUSE CASES:\n- Removing outdated information\n- Cleaning up content before reorganizing\n- Deleting placeholder content\n\nRETURNS:\n{\n  \"success\": true,\n  \"message\": \"Block deleted successfully\",\n  \"blockId\": \"deleted-block-uuid\"\n}\n\nTIP: To replace a block with different content of the same type, use update_wiki_block instead.\nTo change a block's type, delete and recreate it - but never as a way to edit a \"page\" handle (see the cascade above).",
       "inputSchema": {
+        "properties": {
+          "block_id": {
+            "description": "The UUID of the block to delete",
+            "type": "string"
+          }
+        },
+        "required": [
+          "block_id"
+        ],
         "type": "object"
       }
     },
@@ -331,6 +1238,20 @@
       "name": "batch_create_wiki_blocks",
       "description": "Create multiple blocks on a wiki page in one call (max 50).\n\nBlocks are created in array order, each chained after the previous one, so the stored order matches your array - no verification or reorder pass is needed.\n\nIMPORTANT WORKFLOW FOR NESTED PAGES:\nWiki pages can be infinitely nested. When building page hierarchies with content:\n1. Create parent page with create_wiki_page (omit parent_id for root)\n2. READ THE RETURNED page_id FROM THE RESPONSE\n3. Create child pages with parent_id set to that ID\n4. Use batch_create_wiki_blocks to add content to each page\n\nBLOCK CREATION ORDER:\nBlocks are created in array order. Each block is positioned after the previous one.\nThe first block goes after any existing content (or at the start if page is empty).\n\nCONTENT FORMAT:\nText is wrapped in a \"content\" array with text fragments.\n\nEXAMPLE - Creating a complete NPC wiki page:\n{\n  \"page_id\": \"npc-page-uuid\",\n  \"blocks\": [\n    {\"type\": \"heading\", \"content\": {\"content\": [{\"text\": \"Theron Blackwood\"}], \"level\": 1}},\n    {\"type\": \"text\", \"content\": {\"content\": [{\"text\": \"A grizzled veteran of the Northern Wars...\"}]}},\n    {\"type\": \"heading\", \"content\": {\"content\": [{\"text\": \"Appearance\"}], \"level\": 2}},\n    {\"type\": \"bullet\", \"content\": {\"content\": [{\"text\": \"Tall and broad-shouldered\"}]}},\n    {\"type\": \"bullet\", \"content\": {\"content\": [{\"text\": \"Silver-streaked beard, weathered face\"}]}},\n    {\"type\": \"heading\", \"content\": {\"content\": [{\"text\": \"Personality\"}], \"level\": 2}},\n    {\"type\": \"text\", \"content\": {\"content\": [{\"text\": \"Stoic and reserved, but fiercely loyal.\"}]}},\n    {\"type\": \"callout\", \"content\": {\"content\": [{\"text\": \"SECRET: Gambling debt to Thieves Guild\"}], \"type\": \"warning\"}, \"visibility\": \"dm-secret\"},\n    {\"type\": \"page\", \"content\": {\"pageId\": \"faction-uuid\", \"title\": \"The Iron Guard\", \"icon\": \"⚔️\"}}\n  ]\n}\n\nBLOCK TYPES:\n- text: {\"content\": [{\"text\": \"paragraph\"}]}\n- heading: {\"content\": [{\"text\": \"title\"}], \"level\": 1-6}\n- bullet: {\"content\": [{\"text\": \"list item\"}]}\n- numbered: {\"content\": [{\"text\": \"numbered item\"}]}\n- quote: {\"content\": [{\"text\": \"quoted text\"}]}\n- callout: {\"content\": [{\"text\": \"message\"}], \"type\": \"info|warning|success|error\"}\n- divider: {}\n- page: {\"pageId\": \"uuid\", \"title\": \"name\", \"icon\": \"emoji\"}\n- image: {\"url\": \"https://...\", \"caption\": \"optional caption\"}\n- table: {\"markdown\": \"| a | b |\\n| --- | --- |\\n| 1 | 2 |\"} or a canonical table doc (paragraph-only cells, no spans; not allowed on the Campaign Bible)\n\nVISIBILITY OPTIONS (per block):\n- inherit: Uses page's visibility (default)\n- common-knowledge: Visible to all\n- dm-secret: GM role only\n- player-knowledge: Visible to every player in the campaign; records what the party has learned rather than restricting who can read it\n- system: Rules and meta notes, visible to players like common-knowledge\nOn the Campaign Bible, blocks are GM Secret by default. Set visibility to common-knowledge only for blocks players may know, such as world mechanics or everyday life. Leave secrets and campaign spine at the default.\n\nReturns: Array of created block IDs in order. Use these IDs for subsequent updates.\n\nEntity links: text may contain @[Label](entity://<category>/<uuid>) tokens; valid tokens become real entity mentions, and reads emit the same syntax.\nPage links: text may contain @[Title](page://<uuid>) tokens naming other wiki pages in this campaign (ids from get_wiki_tree); valid tokens become real page links, reads emit the same syntax, and a page-handle block reads as its page token.",
       "inputSchema": {
+        "properties": {
+          "blocks": {
+            "description": "Array of block objects with type, content, and optional visibility",
+            "type": "array"
+          },
+          "page_id": {
+            "description": "The UUID of the page to add blocks to",
+            "type": "string"
+          }
+        },
+        "required": [
+          "page_id",
+          "blocks"
+        ],
         "type": "object"
       }
     },
@@ -338,6 +1259,20 @@
       "name": "batch_reorder_wiki_blocks",
       "description": "Reorder multiple blocks on a wiki page in one call.\n\nEFFICIENT REORDERING:\nInstead of calling move_wiki_block multiple times, pass the complete new order in one call.\nThis is much more efficient for reorganizing page content.\n\nUSAGE:\n1. Get current block order from get_wiki_page\n2. Reorder the block IDs as needed\n3. Pass the complete new order\n\nEXAMPLE - Move block to top:\nCurrent order: [block-1, block-2, block-3, block-4]\nMove block-3 to top: [block-3, block-1, block-2, block-4]\n\n{\n  \"page_id\": \"page-uuid\",\n  \"block_ids\": [\"block-3-uuid\", \"block-1-uuid\", \"block-2-uuid\", \"block-4-uuid\"]\n}\n\nIMPORTANT:\n- All block_ids must belong to the specified page\n- The array must include ALL blocks on the page\n- Blocks not in the array will NOT be deleted, but their positions may become inconsistent\n\nReturns: Success confirmation with new block order.",
       "inputSchema": {
+        "properties": {
+          "block_ids": {
+            "description": "Array of block UUIDs in the desired order",
+            "type": "array"
+          },
+          "page_id": {
+            "description": "The UUID of the page containing the blocks",
+            "type": "string"
+          }
+        },
+        "required": [
+          "page_id",
+          "block_ids"
+        ],
         "type": "object"
       }
     },
@@ -345,6 +1280,8 @@
       "name": "get_campaign_bible",
       "description": "Get the Campaign Bible with all its content blocks.\n\nThe Campaign Bible is part of Layer 1 (Constitutional) - the immutable facts about the campaign world.\nIt contains core narrative guidelines, creative boundaries, and story rules.\n\nRETURNS:\n- id: The Bible page UUID\n- title: Page title (e.g., \"Campaign Name Bible\")\n- blocks: Array of content blocks (heading, text, etc.)\n- tokenEstimate: Estimated tokens for AI context\n\nEach block contains: id, type, content, position, visibility.\nThe first block is always the title heading and cannot be modified.\nVISIBILITY: On the Campaign Bible, blocks are GM Secret by default. Set visibility to common-knowledge only for blocks players may know, such as world mechanics or everyday life. Leave secrets and campaign spine at the default.\n\nPLAYER ROLE: a player connection reads the Bible only when the GM turned Bible\nsharing on for players. Sharing off, a campaign with no Bible, and a lookup that\nfails all answer the SAME normal result {\"shared\": false, \"message\": \"...\"} - not\nan error. Tell the player plainly and do not retry; nothing about that answer says\nwhether a Bible exists. Sharing on answers {\"shared\": true, \"page\": {id, title},\n\"blocks\": [...], \"blockCount\": N, \"tokenEstimate\": N} carrying only the blocks\nmarked Common Knowledge that this player may read. A campaign whose player portal\nis wiki-only refuses the call outright.\n\nCONTENT SHAPES (important if you plan to round-trip blocks):\nBlock content can be returned in two formats depending on how it was written:\n- Simple: {\"content\": [{\"text\": \"...\"}]}, written by MCP create paths.\n- Full TipTap doc: {\"type\":\"doc\",\"content\":[{\"type\":\"heading\",\"attrs\":{...},\n  \"content\":[{\"type\":\"text\",\"text\":\"...\"}]}]}, written by the frontend\n  collaborative editor for the Bible page.\nIf you read a block and want to update or rewrite it, do NOT manually\nreformat: pass the simple shape to update_campaign_bible (it normalizes\non write) and let the server handle conversion.\n\nUSE CASES:\n- Read the Campaign Bible to understand narrative guidelines\n- Get block IDs for updating specific sections\n- Check current content before making updates\n\nNOTE: get_constitution also includes a summary of the Campaign Bible content.\nUse this tool for full block-level details.",
       "inputSchema": {
+        "properties": {},
+        "required": [],
         "type": "object"
       }
     },
@@ -352,6 +1289,15 @@
       "name": "update_campaign_bible",
       "description": "Replace the Campaign Bible content with new blocks.\n\nIMPORTANT: This replaces ALL content blocks EXCEPT the title heading.\nThe title block (first block) is protected and will be preserved.\n\nWORKFLOW:\n1. Call get_campaign_bible to see current content\n2. Call this tool with the new blocks array\n3. The title heading stays, all other blocks are replaced\n\nBLOCK FORMAT:\nSame format as batch_create_wiki_blocks:\n{\n  \"blocks\": [\n    {\"type\": \"heading\", \"content\": {\"content\": [{\"text\": \"Section Title\"}], \"level\": 2}},\n    {\"type\": \"text\", \"content\": {\"content\": [{\"text\": \"Paragraph content...\"}]}},\n    {\"type\": \"bullet\", \"content\": {\"content\": [{\"text\": \"List item\"}]}},\n    {\"type\": \"callout\", \"content\": {\"content\": [{\"text\": \"Important note\"}], \"type\": \"info\"}}\n  ]\n}\n\nBLOCK TYPES:\n- text: {\"content\": [{\"text\": \"paragraph\"}]}\n- heading: {\"content\": [{\"text\": \"title\"}], \"level\": 1-6}\n- bullet: {\"content\": [{\"text\": \"list item\"}]}\n- numbered: {\"content\": [{\"text\": \"numbered item\"}]}\n- quote: {\"content\": [{\"text\": \"quoted text\"}]}\n- callout: {\"content\": [{\"text\": \"message\"}], \"type\": \"info|warning|success|error\"}\n- divider: {}\n\nNOTE: Do NOT include the title heading in your blocks array - it will be preserved automatically.\nVISIBILITY (optional per block, e.g. {\"type\": \"text\", \"content\": {...}, \"visibility\": \"common-knowledge\"}): On the Campaign Bible, blocks are GM Secret by default. Set visibility to common-knowledge only for blocks players may know, such as world mechanics or everyday life. Leave secrets and campaign spine at the default.\nNOTE: allowed types here: text, heading, bullet, numbered, quote, callout, divider, image. \"page\" handles and \"table\" blocks are refused (tables cannot round-trip through the Bible).\nNOTE: replacement is create-then-delete: if creating the new blocks fails, the previous Bible content is left untouched.\nNOTE: every block must be an object with a \"type\" string and a \"content\" object (a divider may omit content). An empty blocks array, or any entry that breaks these rules, is refused and nothing changes.\n\nReturns: The updated Campaign Bible page with all blocks.\n\nEntity links: text may contain @[Label](entity://<category>/<uuid>) tokens; valid tokens become real entity mentions, and reads emit the same syntax.\nPage links: text may contain @[Title](page://<uuid>) tokens naming other wiki pages in this campaign (ids from get_wiki_tree); valid tokens become real page links, reads emit the same syntax, and a page-handle block reads as its page token.",
       "inputSchema": {
+        "properties": {
+          "blocks": {
+            "description": "Array of block objects to replace current content (excluding title heading)",
+            "type": "array"
+          }
+        },
+        "required": [
+          "blocks"
+        ],
         "type": "object"
       }
     },
@@ -359,6 +1305,19 @@
       "name": "search_wiki",
       "description": "Full-text search across the campaign wiki's page titles and block content.\n\nComplements search_campaign, which searches ENTITIES only and never touches wiki rows.\n\nRETURNS: results[] of {pageId, pageTitle, blockId?, snippet, rank}, ordered by relevance. blockId is set when the match is inside a specific block; absent when the page TITLE matched. Follow up with get_wiki_page for full content.\n\nSCOPE: the campaign wiki space only. Player tokens see only pages and blocks their effective visibility admits. The Campaign Bible reaches player connections only through get_campaign_bible and get_constitution, only the blocks the GM marked Common Knowledge, and only when the GM has turned sharing on.",
       "inputSchema": {
+        "properties": {
+          "limit": {
+            "description": "Max results (default 20, max 50)",
+            "type": "number"
+          },
+          "query": {
+            "description": "Search text - page titles and block prose are matched together",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
         "type": "object"
       }
     },
@@ -366,6 +1325,40 @@
       "name": "create_session_observation",
       "description": "Mark a moment from a session worth keeping.\n\nOnly available to GM-role connections.\n\nAn observation colours one session recap: a note the GM wants to come back to,\nwith a type and an importance rating. It is not a thread and never resolves;\nuse create_open_thread when something opens a narrative obligation that will\nlater be closed.\n\nTypes: highlight (a memorable moment), state_change (something changed\npermanently), revelation (a secret came out), development (character or story\nprogression). Defaults to highlight. An unrecognised type is refused by name\nrather than stored.\n\nImportance runs 0 to 5 and defaults to 3. Observations of importance 3 and\nabove are the ones surfaced most prominently to readers.\n\nOptionally attach the observation to one entity with entity_type and entity_id\ntogether. Both or neither.\n\nReturns the stored observation including its id, which is what\nupdate_session_observation and delete_session_observation take.",
       "inputSchema": {
+        "properties": {
+          "description": {
+            "description": "Why this is significant and what is worth remembering about it",
+            "type": "string"
+          },
+          "entity_id": {
+            "description": "UUID of that entity; requires entity_type",
+            "type": "string"
+          },
+          "entity_type": {
+            "description": "Category of the entity this is about, e.g. npcs or locations; requires entity_id",
+            "type": "string"
+          },
+          "importance": {
+            "description": "0 to 5, higher is more central (default: 3)",
+            "type": "number"
+          },
+          "observation_type": {
+            "description": "highlight, state_change, revelation or development (default: highlight)",
+            "type": "string"
+          },
+          "session_id": {
+            "description": "UUID of the session recap to attach this to; must belong to this campaign",
+            "type": "string"
+          },
+          "title": {
+            "description": "Short title, e.g. 'The party discovered the hidden passage'",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "title"
+        ],
         "type": "object"
       }
     },
@@ -373,6 +1366,39 @@
       "name": "update_session_observation",
       "description": "Change an existing session observation.\n\nOnly available to GM-role connections.\n\nEvery field except observation_id is optional; omitted fields keep their\ncurrent values. The observation stays on the session it was created against:\nthis tool cannot move one between sessions.\n\nTypes: highlight (a memorable moment), state_change (something changed\npermanently), revelation (a secret came out), development (character or story\nprogression). Defaults to highlight. An unrecognised type is refused by name\nrather than stored.\n\nAn observation belonging to another campaign is answered exactly like one that\ndoes not exist.\n\nget_narrative_state does not return observation ids, so take the id from\ncreate_session_observation or from get_knowledge_graph with\ngraph_type='timeline'.",
       "inputSchema": {
+        "properties": {
+          "description": {
+            "description": "New description",
+            "type": "string"
+          },
+          "entity_id": {
+            "description": "UUID of that entity; requires entity_type",
+            "type": "string"
+          },
+          "entity_type": {
+            "description": "Category of the entity this is about; requires entity_id",
+            "type": "string"
+          },
+          "importance": {
+            "description": "0 to 5, higher is more central",
+            "type": "number"
+          },
+          "observation_id": {
+            "description": "UUID of the observation to change",
+            "type": "string"
+          },
+          "observation_type": {
+            "description": "highlight, state_change, revelation or development",
+            "type": "string"
+          },
+          "title": {
+            "description": "New title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "observation_id"
+        ],
         "type": "object"
       }
     },
@@ -380,6 +1406,15 @@
       "name": "delete_session_observation",
       "description": "Remove a session observation.\n\nOnly available to GM-role connections.\n\nThis removes the note, not the session it was attached to and not any entity it\nreferenced. An observation belonging to another campaign is answered exactly\nlike one that does not exist.",
       "inputSchema": {
+        "properties": {
+          "observation_id": {
+            "description": "UUID of the observation to remove",
+            "type": "string"
+          }
+        },
+        "required": [
+          "observation_id"
+        ],
         "type": "object"
       }
     }

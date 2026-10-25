@@ -1,9 +1,9 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "bot.ttrpg/grimoire",
-  "title": "Grimoire",
-  "description": "Campaign manager for D&D and TTRPG GMs: your AI reads and writes a live typed campaign database.",
-  "version": "1.5.3",
+  "title": "Grimoire for Gamemasters",
+  "description": "D&D and TTRPG campaign manager for GMs: your AI reads and writes a live, typed campaign database.",
+  "version": "1.6.0",
   "repository": {
     "url": "https://github.com/zafety-vibin/grimoire-mcp",
     "source": "github"

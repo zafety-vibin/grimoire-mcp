@@ -16,7 +16,7 @@ license: MIT
 compatibility: Any MCP client that supports remote streamable HTTP connectors, including Claude, ChatGPT, Cursor, and Claude Code.
 metadata:
   author: zafety-vibin
-  version: "1.2.0"
+  version: "1.2.1"
 ---
 
 # Working with Grimoire
@@ -356,10 +356,9 @@ Every entity, wiki page, wiki block, and graph node carries a visibility value:
 - `common-knowledge`: everyone at the table knows it.
 - `player-knowledge`: on an **entity**, every player in the campaign can see it in
   the portal (it is the "the party has learned this" tier). On a **wiki page or
-  block** it is, today, a GM tracking marker only: no player connection can read it,
-  because the admission list it expects has no control that sets it. If the party
-  should read a wiki page, mark it `common-knowledge` or `system`; do not rely on
-  `player-knowledge` to share wiki content.
+  block** it means the same: every player who has joined the campaign can read it,
+  and a GM previewing as a player sees it too. Use it for what the party has
+  discovered; use `common-knowledge` for what everyone in the world already knows.
 - `dm-secret`: GM only. This is the "GM secret" tier.
 - `system` (wiki only): rules and meta notes; players see it like common knowledge.
 - `inherit` (wiki only): a block follows its page; a child page follows the page
@@ -507,7 +506,6 @@ What this means for you:
   token, or when you hold the id. That is how links quietly disappear.
 - Deleting a page block to "edit" it. That trashes the page and its sub-pages.
 - Editing a table while it is on someone's screen.
-- Sharing wiki content with players by marking it `player-knowledge`.
 - Treating a visibility filter as an obstacle, or a "page not found" as a clue.
 - Rewriting a thread's text instead of logging a progression, which destroys the
   session-over-session history that `get_thread_progressions` returns.
